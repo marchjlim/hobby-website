@@ -5,18 +5,21 @@ export const HeroSection = () => {
         <div className="container max-w-4xl mx-auto text-center z-10">
             <div className="space-y-6">
                 <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-                    <span className="opacity-0 animate-fade-in">Hi, I'm</span>
-                    <span className="text-primary opacity-0 animate-fade-in-delay-1">{" "}Marc</span>
-                    <span className="text-gradient ml-2 opacity-0 animate-fade-in-delay-2">{" "}Lim</span>
+                    <span className="opacity-0 animate-fade-in">Hi,</span>
+                    <span className="text-gradient opacity-0 animate-fade-in-delay-1">{" "}I'm</span>
+                    <span className="text-gradient ml-2 opacity-0 animate-fade-in-delay-2">
+                        {" "}Plasticmeth
+                        <span className="text-primary">enjoyer</span>
+                    </span>
                 </h1>
 
                 <p className="text-lg md:text-xl text-muted-foreground max-2-2xl mx-auto opacity:0 animate-fade-in-delay-3">
-                    I am currently a CS sophomore at NUS, with an interest in AI.
+                    A fellow gunpla addict, and seller.
                 </p>
 
                 <div>
-                    <a href="#projects" className="cosmic-button opacity-0 animate-fade-in-delay-4">
-                        View My Work
+                    <a href="#listings" className="cosmic-button opacity-0 animate-fade-in-delay-4">
+                        View Listings
                     </a>
                 </div>
             </div>
