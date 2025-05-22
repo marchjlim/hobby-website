@@ -31,9 +31,14 @@ export const ListingsSection = () => {
 
     return <section id="listings" className="py-24 px-4 relative bg-secondary/30">
         <div className="container mx-auto max-w-5xl">
-            <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
-                My <span className="text-primary"> Listings</span>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
+            My <span className="text-primary"> Listings</span>
             </h2>
+            <p className="text-muted-foreground max-2-2xl mx-auto mb-12">
+                See a kit that you want but isn't here? Feel free to <a href="#contact">contact me </a>
+                and I will see if I can source it out for you.
+            </p>
+            
 
             <div className="flex flex-wrap justify-center gap-4 mb-12">
                 {categories.map((category, key) => (
