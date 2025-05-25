@@ -1,0 +1,80 @@
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+const listings = [
+    {name: "MG Rezel type C defenser a + b unit", categories: ["MG", "Regular release", "1/100", "in-stock"], url: "", image: "/listings/rezel_type_c.jpg"},
+    {name: "MG Tallgeese III special coating", categories: ["MG", "Event-limited", "1/100", "in-stock", "special coating"], url: "", image: "/listings/mg_tallgeese_III_special_coating.png"},
+    {name: "RG Banshee Final battle special coating", categories: ["RG", "Premium Bandai", "1/144", "in-stock", "special coating"], url: "", image: "/listings/rg_banshee_special_coating.jpg"},
+    {name: "RG Unicorn Final battle special coating", categories: ["RG", "Gundam base limited", "1/144", "in-stock", "special coating"], url: ""},
+]
+
+const categories = [
+    "all",
+    "RG",
+    "MG",
+    "1/144",
+    "1/100",
+    "Regular release",
+    "Event-limited",
+    "Gundam base limited",
+    "Premium Bandai",
+    "in-stock",
+    "pre-order",
+    "Metal build",
+];
+
+export const ListingsSection = () => {
+    const [activeCategory, setActiveCategory] = useState("all");
+
+    const filteredListings = listings.filter((listing) => activeCategory === "all" || listing.categories.includes(activeCategory));
+    
+
+    return <section id="listings" className="py-24 px-4 relative bg-secondary/30">
+        <div className="container mx-auto max-w-5xl">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
+            My <span className="text-primary"> Listings</span>
+            </h2>
+            <p className="text-muted-foreground max-2-2xl mx-auto mb-12">
+                See a kit that you want but isn't here? Feel free to <a href="#contact">contact me </a>
+                and I will see if I can source it out for you.
+            </p>
+            
+
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+                {categories.map((category, key) => (
+                    <button 
+                        key={key} 
+                        className={cn("px-5 py-2 rounded-full transition-colors duration-300 capitalize",
+                            activeCategory === category ? "bg-primary text-primary-foreground" 
+                                                        : "bg-secondary rounded-full border-1 text-foreground hover:bd-secondary" 
+                        )}
+                        onClick={() => setActiveCategory(category)}
+                    >
+                        {category}
+                    </button>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredListings.map((listing, key) => (
+                    <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
+                        <div className="text-left mb-4 h-14">
+                            <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
+                        </div>
+                        
+                        <img src={listing.image} 
+                             className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
+                        />
+                        <div className="mt-4 flex flex-wrap">
+                            {listing.categories.map((category) => (
+                                <span className="px-2 py-1">
+                                    <span className="rounded-full border-1 px-1 bg-secondary text-foreground">{category}</span>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </section>
+}

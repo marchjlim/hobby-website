@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 const navItems = [
     {name: "Home", href: "#hero"},
     {name: "About", href: "#about"},
-    {name: "Skills", href: "#skills"},
-    {name: "Projects", href: "#projects"},
+    {name: "Listings", href: "#listings"},
     {name: "Contact", href: "#contact"},
+    {name: "FAQ", href: "#faq"},
 ];
 
 const navHeight = 10;
@@ -32,8 +32,7 @@ export const Navbar = () => {
                 <div className="container flex items-center justify-between">
                     <a className="text-xl font-bold text-primary flex items-center" href="#hero">
                         <span className="relative z-10">
-                            <span className="text-glow text-foreground"> Marc </span>{" "}
-                            Portfolio
+                            <span className="text-glow text-foreground"> Plasticmeth</span>enjoyer
                         </span>
                     </a>
 
