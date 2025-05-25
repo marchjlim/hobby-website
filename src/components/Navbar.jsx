@@ -5,8 +5,8 @@ const navItems = [
     {name: "Home", href: "#hero"},
     {name: "About", href: "#about"},
     {name: "Listings", href: "#listings"},
-    {name: "Projects", href: "#projects"},
     {name: "Contact", href: "#contact"},
+    {name: "FAQ", href: "#faq"},
 ];
 
 const navHeight = 10;
