@@ -26,10 +26,21 @@ const categories = [
 ];
 
 export const ListingsSection = () => {
-    const [activeCategory, setActiveCategory] = useState("all");
+    const [activeTag, setActiveTag] = useState("all");
 
     const [listings, setListings] = useState([]);
     const [tagMap, setTagMap] = useState({});
+    const [tags, setTags] = useState([]);
+
+    const fetchAllTags = async () => {
+        const {error, data: tagData } = await supabase.from("ListingTag").select("name");
+
+        if (error) {
+            console.error("Error fetching all tags: ", error.message);
+            return;
+        }
+        setTags(tagData.map(row => row.name));
+    }
 
     const fetchListings = async () => {
         const { error, data: dataListings } = await supabase.from("Listings").select("*").order("created_at", { ascending : true });
@@ -56,10 +67,11 @@ export const ListingsSection = () => {
     }
 
     useEffect(() => {
+        fetchAllTags();
         fetchListings();
     }, []);
 
-    // const filteredListings = listings.filter((listing) => activeCategory === "all" || listing.categories.includes(activeCategory));
+    const filteredListings = listings.filter((listing) => activeTag === "all" || (tagMap[listing.id] || []).includes(activeTag));
     
 
     return <section id="listings" className="py-24 px-4 relative bg-secondary/30">
@@ -74,22 +86,22 @@ export const ListingsSection = () => {
             
 
             <div className="flex flex-wrap justify-center gap-4 mb-12">
-                {categories.map((category, key) => (
+                {["all", ...tags].map((tag, key) => (
                     <button 
                         key={key} 
                         className={cn("px-5 py-2 rounded-full transition-colors duration-300 capitalize",
-                            activeCategory === category ? "bg-primary text-primary-foreground" 
+                            activeTag === tag ? "bg-primary text-primary-foreground" 
                                                         : "bg-secondary rounded-full border-1 text-foreground hover:bd-secondary" 
                         )}
-                        onClick={() => setActiveCategory(category)}
+                        onClick={() => setActiveTag(tag)}
                     >
-                        {category}
+                        {tag}
                     </button>
                 ))}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {listings.map((listing, key) => (
+                {filteredListings.map((listing, key) => (
                     <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                         <div className="text-left mb-4 h-14">
                             <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
