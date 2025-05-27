@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { supabase } from "../supabase-client"; // Adjust path if needed
 
-const listings = [
-    {name: "MG Rezel type C defenser a + b unit", categories: ["MG", "Regular release", "1/100", "in-stock"], url: "", image: "/listings/rezel_type_c.jpg"},
-    {name: "MG Tallgeese III special coating", categories: ["MG", "Event-limited", "1/100", "in-stock", "special coating"], url: "", image: "/listings/mg_tallgeese_III_special_coating.png"},
-    {name: "RG Banshee Final battle special coating", categories: ["RG", "Premium Bandai", "1/144", "in-stock", "special coating"], url: "", image: "/listings/rg_banshee_special_coating.jpg"},
-    {name: "RG Unicorn Final battle special coating", categories: ["RG", "Gundam base limited", "1/144", "in-stock", "special coating"], url: ""},
-]
+
+// const listings = [
+//     {name: "MG Rezel type C defenser a + b unit", categories: ["MG", "Regular release", "1/100", "in-stock"], url: "", image: "/listings/rezel_type_c.jpg"},
+//     {name: "MG Tallgeese III special coating", categories: ["MG", "Event-limited", "1/100", "in-stock", "special coating"], url: "", image: "/listings/mg_tallgeese_III_special_coating.png"},
+//     {name: "RG Banshee Final battle special coating", categories: ["RG", "Premium Bandai", "1/144", "in-stock", "special coating"], url: "", image: "/listings/rg_banshee_special_coating.jpg"},
+//     {name: "RG Unicorn Final battle special coating", categories: ["RG", "Gundam base limited", "1/144", "in-stock", "special coating"], url: "", image:"/listings/rg_unicorn_special_coating.jpg"},
+// ]
 
 const categories = [
     "all",
@@ -26,7 +28,38 @@ const categories = [
 export const ListingsSection = () => {
     const [activeCategory, setActiveCategory] = useState("all");
 
-    const filteredListings = listings.filter((listing) => activeCategory === "all" || listing.categories.includes(activeCategory));
+    const [listings, setListings] = useState([]);
+    const [tagMap, setTagMap] = useState({});
+
+    const fetchListings = async () => {
+        const { error, data: dataListings } = await supabase.from("Listings").select("*").order("created_at", { ascending : true });
+
+        if (error) {
+            console.error("Error fetching listings", error.message);
+            return;
+        }
+
+        setListings(dataListings);
+
+        // fetch tags
+        const tagMapTemp = {};
+        for (const listing of dataListings) {
+            const { error, data } = await supabase.from("Tagged").select("TagName").eq("ListingId", listing.id);
+            
+            if (error) {
+                console.error("Error fetching tags for listings: ", error.message);
+                continue;
+        }  
+        tagMapTemp[listing.id] = data.map(row => row.TagName);
+        }
+        setTagMap(tagMapTemp);
+    }
+
+    useEffect(() => {
+        fetchListings();
+    }, []);
+
+    // const filteredListings = listings.filter((listing) => activeCategory === "all" || listing.categories.includes(activeCategory));
     
 
     return <section id="listings" className="py-24 px-4 relative bg-secondary/30">
@@ -56,19 +89,20 @@ export const ListingsSection = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredListings.map((listing, key) => (
+                {listings.map((listing, key) => (
                     <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                         <div className="text-left mb-4 h-14">
                             <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
                         </div>
                         
-                        <img src={listing.image} 
+                        <img src={listing.image_url} 
                              className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
                         />
                         <div className="mt-4 flex flex-wrap">
-                            {listing.categories.map((category) => (
+                            {/*specify empty array here for listings with no tags to appear.*/}
+                            {(tagMap[listing.id] || []).map((tag) => (
                                 <span className="px-2 py-1">
-                                    <span className="rounded-full border-1 px-1 bg-secondary text-foreground">{category}</span>
+                                    <span className="rounded-full border-1 px-1 bg-secondary text-foreground">{tag}</span>
                                 </span>
                             ))}
                         </div>
