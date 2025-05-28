@@ -194,9 +194,9 @@ export const ListingForm = () => {
                     />
                 </div>
                 
-                <span className="flex flex-row gap-2">
+                <span className="flex justify-between gap-2">
                     <label className="cosmic-button">
-                        {listingImage.name || "Upload Image"}
+                        {listingImage ? listingImage.name : "Upload Image"}
                         <input
                             type="file"
                             accept="image/*"
