@@ -89,7 +89,7 @@ export const ListingsSection = () => {
                 {["all", ...tags].map((tag, key) => (
                     <button 
                         key={key} 
-                        className={cn("px-5 py-2 rounded-full transition-colors duration-300 capitalize",
+                        className={cn("tag",
                             activeTag === tag ? "bg-primary text-primary-foreground" 
                                                         : "bg-secondary rounded-full border-1 text-foreground hover:bd-secondary" 
                         )}
