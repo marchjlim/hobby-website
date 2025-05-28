@@ -1,15 +1,39 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../supabase-client";
 import { WithContext as ReactTagInput } from 'react-tag-input';
+import { useToast } from "@/hooks/use-toast";
+import { Trash } from 'lucide-react';
 
 export const ListingForm = () => {
     const [formData, setFormData] = useState({
         listingName: "",
         listingImg: "",
-        listingTags: [],
+        listingTags: [],    
     });
 
+    const [allTags, setAllTags] = useState([]);
     const [listingImage, setListingImage] = useState(null);
+
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const fetchAllTags = async () => {
+            const {error, data: tagData } = await supabase.from("ListingTag").select("name");
+
+            if (error) {
+                console.error("Error fetching all tags: ", error.message);
+                return;
+            }
+            setAllTags(tagData.map(row => ({ id: row.name, text: row.name })));
+        }
+        fetchAllTags();
+    }, []);
+
+    const addPredefinedTag = (tag) => {
+        // add into tags
+        addTag(tag);
+    }
+    
 
     const deleteListing = async (id) => {
         const {error} = await supabase.from("Listings").delete().eq("id", id);
@@ -99,11 +123,26 @@ export const ListingForm = () => {
     const [tags, setTags] = useState([]);
 
     const addTag = (tag) => {
-        setTags([...tags, tag]);
+        // do not allow adding duplicate if tags already selected.
+        if (!tags.some(t => t.text.toLowerCase() === tag.text.toLowerCase())) {
+            setTags([...tags, tag]);
+        } else {
+            // duplicate tag
+            setTimeout(() => {
+                toast({
+                    title: "Duplicate tag detected",
+                    description: "Please ensure all tags for a listing are unique",
+                })
+            }, 1000);
+        }
     }
 
     const deleteTag = (idx) => {
         setTags(tags.filter((tag, index) => idx !== index));
+    }
+
+    const deleteAllTags = () => {
+        setTags([]);
     }
 
     
@@ -112,23 +151,66 @@ export const ListingForm = () => {
         <form onSubmit={handleSubmit} className="flex flex-col bg-card mx-auto px-100">
             <h3 className="text-3xl md:text-4xl font-bold text-center mb-4"> New Listing Details </h3>
             <div className="flex flex-col mb-4 gap-2">
-                <span className="text-secondary text-2xl md:text-3xl">Listing name</span>
+                <span className="text-secondary text-2xl md:text-3xl font-semibold">Listing name</span>
                 <input name="name" 
                        type="text" 
                        placeholder="Listing name" 
-                       className="border-1 bg-secondary rounded"
+                       required
+                       className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                        value={formData.listingName} 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
-                <ReactTagInput
-                    tags={tags}
-                    handleDelete={deleteTag}
-                    handleAddition={addTag}
-                    inputFieldPosition="bottom"
-                    placeholder="Enter tags for listing"
-                />
-                <input type="file" accept="image/*" onChange={handleFileChange} className="cosmic-button"/>
+                <span className="text-secondary text-2xl md:text-3xl font-semibold">
+                    Choose some existing tags or add your own
+                </span>
+                <span className="text-secondary text-lg md:text-1xl font-semibold">
+                        Existing tags:
+                </span>
+                <div className="flex flex-row gap-2 w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
+                    {allTags.map((tag) => (
+                        <button className="tag rounded-full border-1" 
+                                onClick={() => addPredefinedTag(tag)}>
+                                    {tag.text}
+                        </button>
+                    ))}
+                </div>
+                <span className="text-secondary text-lg md:text-1xl font-semibold">
+                        Selected tags:
+                </span>
+                <div className="flex w-full px-2 py-2 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
+                    <ReactTagInput
+                        tags={tags}
+                        handleDelete={deleteTag}
+                        handleAddition={addTag}
+                        inputFieldPosition="bottom"
+                        placeholder="Create new tag"
+                        classNames={{
+                            tag: 'border-1 rounded-full px-1 mr-2',
+                            tagInputField: 'w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary',
+                            tagInput: 'py-2',
+                            remove: 'px-1'
+                        }}
+                    />
+                </div>
+                
+                <span className="flex flex-row gap-2">
+                    <label className="cosmic-button">
+                        {listingImage.name || "Upload Image"}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                    </label>
+                    <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary"
+                            onClick={deleteAllTags}> 
+                        Delete all tags
+                        <Trash />
+                    </button>
+                </span>
+                
             </div>
             
             <button type="submit" className="cosmic-button">Create Listing</button>
