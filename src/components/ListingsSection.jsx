@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "../supabase-client"; // Adjust path if needed
+import { Trash } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { DeleteListingButton } from "./DeleteListingButton";
 
 
 // const listings = [
@@ -31,6 +34,9 @@ export const ListingsSection = ({ refreshFlag }) => {
     const [listings, setListings] = useState([]);
     const [tagMap, setTagMap] = useState({});
     const [tags, setTags] = useState([]);
+
+    const location = useLocation();
+    const isAdminPage = location.pathname === "/secret-admin-page";
 
     const fetchAllTags = async () => {
         const {error, data: tagData } = await supabase.from("ListingTag").select("name");
@@ -103,8 +109,9 @@ export const ListingsSection = ({ refreshFlag }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredListings.map((listing, key) => (
                     <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
-                        <div className="text-left mb-4 h-14">
+                        <div className="text-left mb-4 h-14 flex justify-between items-center">
                             <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
+                            {isAdminPage && <DeleteListingButton listing={listing} /> }
                         </div>
                         
                         <img src={listing.image_url} 
