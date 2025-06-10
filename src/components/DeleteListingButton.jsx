@@ -2,12 +2,15 @@ import { Trash } from "lucide-react"
 import { supabase } from "../supabase-client"
 
 
-export const DeleteListingButton = ({ listing }) => {
+export const DeleteListingButton = ({ listing, onDeleted }) => {
     const deleteListing = async (listingId) => {
         const {error} = await supabase.from("Listings").delete().eq("id", listingId);
         if (error) {
             console.error("Error deleting listing:", error.message);
             return;
+        } 
+        if (onDeleted) {
+            onDeleted();
         }
     }
     return <button className="relative group" onClick={() => {
