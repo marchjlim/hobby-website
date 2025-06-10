@@ -25,7 +25,7 @@ const categories = [
     "Metal build",
 ];
 
-export const ListingsSection = () => {
+export const ListingsSection = ({ refreshFlag }) => {
     const [activeTag, setActiveTag] = useState("all");
 
     const [listings, setListings] = useState([]);
@@ -69,7 +69,7 @@ export const ListingsSection = () => {
     useEffect(() => {
         fetchAllTags();
         fetchListings();
-    }, []);
+    }, [refreshFlag]);
 
     const filteredListings = listings.filter((listing) => activeTag === "all" || (tagMap[listing.id] || []).includes(activeTag));
     
