@@ -111,7 +111,7 @@ export const ListingsSection = ({ refreshFlag }) => {
                     <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                         <div className="text-left mb-4 h-14 flex justify-between items-center">
                             <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
-                            {isAdminPage && <DeleteListingButton listing={listing} /> }
+                            {isAdminPage && <DeleteListingButton listing={listing} onDeleted={fetchListings} /> }
                         </div>
                         
                         <img src={listing.image_url} 
