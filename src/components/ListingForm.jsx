@@ -4,7 +4,7 @@ import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
 import { Trash } from 'lucide-react';
 
-export const ListingForm = () => {
+export const ListingForm = ({ onListingCreated }) => {
     const [formData, setFormData] = useState({
         listingName: "",
         listingImg: "",
@@ -16,16 +16,17 @@ export const ListingForm = () => {
 
     const { toast } = useToast();
 
-    useEffect(() => {
-        const fetchAllTags = async () => {
-            const {error, data: tagData } = await supabase.from("ListingTag").select("name");
+    const fetchAllTags = async () => {
+        const {error, data: tagData } = await supabase.from("ListingTag").select("name");
 
-            if (error) {
-                console.error("Error fetching all tags: ", error.message);
-                return;
-            }
-            setAllTags(tagData.map(row => ({ id: row.name, text: row.name })));
+        if (error) {
+            console.error("Error fetching all tags: ", error.message);
+            return;
         }
+        setAllTags(tagData.map(row => ({ id: row.name, text: row.name })));
+    }
+
+    useEffect(() => {
         fetchAllTags();
     }, []);
 
@@ -118,6 +119,9 @@ export const ListingForm = () => {
             listingImg: "",
             listingTags: [],
         });
+
+        await fetchAllTags();
+        await onListingCreated();
     };
 
     const [tags, setTags] = useState([]);
