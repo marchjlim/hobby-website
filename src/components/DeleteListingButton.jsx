@@ -22,7 +22,7 @@ export const DeleteListingButton = ({ listing, onDeleted }) => {
                 <Trash className="text-red-500"/>
                 <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block 
                                 bg-black text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
-                    Delete item
+                    Delete listing
                 </span>
             </button>
     

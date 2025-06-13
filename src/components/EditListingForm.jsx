@@ -1,47 +1,34 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { supabase } from "../supabase-client";
 import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
 import { Trash } from 'lucide-react';
 
-export const ListingForm = ({ onListingCreated }) => {
+export const EditListingForm = ({ listing, initialListingTags, onListingEdited }) => {
+    // convert each tag to the structure of ReactTagInput
+    let formattedInitialListingTags = initialListingTags.map(tag => ({ id: tag, text: tag }));
     const [formData, setFormData] = useState({
-        listingName: "",
-        listingImg: "",
-        listingTags: [],    
+        listingName: listing.name,
+        listingImg: listing.image_url,
+        listingTags: formattedInitialListingTags,
     });
 
-    const [allTags, setAllTags] = useState([]);
-    const [listingImage, setListingImage] = useState(null);
+    // formData should maintain list of all tags that the user wants to have in the updated listing
+    // backend should maintain list of tags that user wants to remove, and tags that user wants to add
+
+    const [allTags, setAllTags] = useState(formattedInitialListingTags);
+    const [updatedListingImage, setUpdatedListingImage] = useState(null);
 
     const { toast } = useToast();
-
-    const fetchAllTags = async () => {
-        const {error, data: tagData } = await supabase.from("ListingTag").select("name");
-
-        if (error) {
-            console.error("Error fetching all tags: ", error.message);
-            return;
-        }
-        setAllTags(tagData.map(row => ({ id: row.name, text: row.name })));
-    }
-
-    useEffect(() => {
-        fetchAllTags();
-    }, []);
-
-    const addPredefinedTag = (tag) => {
-        // add into tags
-        addTag(tag);
-    }
 
     const handleFileChange = (event) => {
         // store file into a state
         if (event.target.files && event.target.files.length > 0) {
-            setListingImage(event.target.files[0]);
+            setUpdatedListingImage(event.target.files[0]);
         }
     };
 
+    // update image?
     const uploadImage = async (file) => {
         const filePath = `${file.name}-${Date.now()}`; 
         const {error} = await supabase.storage.from("listing-images").upload(filePath, file);
@@ -56,28 +43,30 @@ export const ListingForm = ({ onListingCreated }) => {
         return data.publicUrl;
     }
 
-    const handleSubmit = async (event) => {
+    const handleUpdate = async (event) => {
         event.preventDefault();
 
-        let imageUrl = null;
+        let updatedImageUrl = null;
 
-        if (listingImage) {
-            imageUrl = await uploadImage(listingImage);
+        if (updatedListingImage) {
+            updatedImageUrl = await uploadImage(updatedListingImage);
         }
         
-        // insert into listings
-        const { error, data } = await supabase.from("Listings").insert(
-                                                               {name: formData.listingName, 
-                                                                image_url: imageUrl})
-                                                        .select()
-                                                        .single();
+        // update listing table
+        const { error } = await supabase.from("Listings")
+                                        .update({ name: formData.listingName, 
+                                                  image_url: updatedImageUrl ? updatedImageUrl
+                                                                             : formData.listingImg })
+                                        .eq("id", listing.id);
+
                                 
         if (error) {
-            console.error("Error adding listing", error.message);
+            console.error("Error updating listing", error.message);
             return;
         }
 
-        for (const tag of tags) {
+        for (const tag of allTags) {
+            // insert new listing tag, if any
             const {error: tagError} = await supabase.from("ListingTag").upsert({ name: tag.text },
                                                              { onConflict: ['name'] }
                                                             )
@@ -86,31 +75,35 @@ export const ListingForm = ({ onListingCreated }) => {
                 return;
             }
             
-            const {error: relationError} = await supabase.from("Tagged").insert({ TagName: tag.text, ListingId: data.id });
+            const {error: relationError} = await supabase.from("Tagged").upsert({ TagName: tag.text, ListingId: listing.id });
             if (relationError) {
                 console.error("Error adding listing and tag relation", relationError.message);
                 return;
             }
         }
 
+        // delete relations for tags that have been removed
+        let lowerCaseTags = allTags.map(tag => tag.text.toLowerCase());
+        // removed tags are ones that contained in initialListingTags but not in allTags
+        let removedTags = initialListingTags.filter(tag => !lowerCaseTags.includes(tag.toLowerCase()));
+        for (const removedTag of removedTags) {
+            const {error: removeRelationError} = await supabase.from("Tagged").delete()
+                                                                              .eq("ListingId", listing.id)
+                                                                              .eq("TagName", removedTag);
+            
+            if (removeRelationError) {
+                console.error("Error removing listing and tag relation", removeRelationError.message);
+            }
+        }
 
-
-        setFormData({
-            listingName:"",
-            listingImg: "",
-            listingTags: [],
-        });
-
-        await fetchAllTags();
-        await onListingCreated();
+        // change to onListingUpdated
+        await onListingEdited();
     };
-
-    const [tags, setTags] = useState([]);
 
     const addTag = (tag) => {
         // do not allow adding duplicate if tags already selected.
-        if (!tags.some(t => t.text.toLowerCase() === tag.text.toLowerCase())) {
-            setTags([...tags, tag]);
+        if (!allTags.some(t => t.text.toLowerCase() === tag.text.toLowerCase())) {
+            setAllTags([...allTags, tag]);
         } else {
             // duplicate tag
             setTimeout(() => {
@@ -123,49 +116,44 @@ export const ListingForm = ({ onListingCreated }) => {
     }
 
     const deleteTag = (idx) => {
-        setTags(tags.filter((tag, index) => idx !== index));
+        setAllTags(allTags.filter((tag, index) => idx !== index));
     }
 
     const deleteAllTags = () => {
-        setTags([]);
+        setAllTags([]);
     }
 
     
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col bg-card mx-auto px-100">
-            <h3 className="text-3xl md:text-4xl font-bold text-center mb-4"> New Listing Details </h3>
+        <form onSubmit={handleUpdate} className="flex flex-col w-full space-y-4">
             <div className="flex flex-col mb-4 gap-2">
-                <span className="text-secondary text-2xl md:text-3xl font-semibold">Listing name</span>
+                <span className="text-secondary text-xl font-semibold">Listing name</span>
                 <input name="name" 
                        type="text" 
                        placeholder="Listing name" 
                        required
-                       className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                       className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                        value={formData.listingName} 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
-                <span className="text-secondary text-2xl md:text-3xl font-semibold">
-                    Choose some existing tags or add your own
-                </span>
                 <span className="text-secondary text-lg md:text-1xl font-semibold">
-                        Existing tags:
+                        Listing tags:
                 </span>
                 <div className="flex flex-row gap-2 w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
                     {allTags.map((tag) => (
-                        <button className="tag rounded-full border-1" 
-                                onClick={() => addPredefinedTag(tag)}>
-                                    {tag.text}
-                        </button>
+                        <span className="tag rounded-full border-1">
+                            {tag.text}
+                        </span>
                     ))}
                 </div>
                 <span className="text-secondary text-lg md:text-1xl font-semibold">
-                        Selected tags:
+                        Add new tag:
                 </span>
                 <div className="flex w-full px-2 py-2 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
                     <ReactTagInput
-                        tags={tags}
+                        tags={allTags}
                         handleDelete={deleteTag}
                         handleAddition={addTag}
                         inputFieldPosition="bottom"
@@ -181,7 +169,7 @@ export const ListingForm = ({ onListingCreated }) => {
                 
                 <span className="flex justify-between gap-2">
                     <label className="cosmic-button">
-                        {listingImage ? listingImage.name : "Upload Image"}
+                        {updatedListingImage ? updatedListingImage.name : "Upload New Image"}
                         <input
                             type="file"
                             accept="image/*"
@@ -189,7 +177,7 @@ export const ListingForm = ({ onListingCreated }) => {
                             className="hidden"
                         />
                     </label>
-                    <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary"
+                    <button type="button" className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary"
                             onClick={deleteAllTags}> 
                         Delete all tags
                         <Trash />
@@ -198,7 +186,7 @@ export const ListingForm = ({ onListingCreated }) => {
                 
             </div>
             
-            <button type="submit" className="cosmic-button">Create Listing</button>
+            <button type="submit" className="cosmic-button">Update Listing</button>
         </form>
     )
 }
