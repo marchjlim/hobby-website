@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "../supabase-client"; // Adjust path if needed
-import { Trash } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { DeleteListingButton } from "./DeleteListingButton";
+import { EditListingButton } from "./EditListingButton";
+import { ListingCard } from "./ListingCard";
 
 
 // const listings = [
@@ -107,26 +108,12 @@ export const ListingsSection = ({ refreshFlag }) => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredListings.map((listing, key) => (
-                    <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
-                        <div className="text-left mb-4 h-14 flex justify-between items-center">
-                            <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
-                            {isAdminPage && <DeleteListingButton listing={listing} onDeleted={fetchListings} /> }
-                        </div>
-                        
-                        <img src={listing.image_url} 
-                             className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
-                        />
-                        <div className="mt-4 flex flex-wrap">
-                            {/*specify empty array here for listings with no tags to appear.*/}
-                            {(tagMap[listing.id] || []).map((tag) => (
-                                <span className="px-2 py-1">
-                                    <span className="rounded-full border-1 px-1 bg-secondary text-foreground">{tag}</span>
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                ))}
+                {filteredListings.map((listing, key) => 
+                    <ListingCard listing={listing} key={key} 
+                                 tags={(tagMap[listing.id] || [])} fetchListings={fetchListings}
+                                 isAdminPage={isAdminPage} 
+                    />
+                )}
             </div>
         </div>
     </section>
