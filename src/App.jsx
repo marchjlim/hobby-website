@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Admin } from './pages/Admin';
 
 function App() {
+
   return (
     <>
     <Toaster />
