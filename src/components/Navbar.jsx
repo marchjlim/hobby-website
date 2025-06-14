@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { LogoutButton } from "./LogoutButton";
 const navItems = [
     {name: "Home", href: "#hero"},
     {name: "About", href: "#about"},
@@ -11,7 +12,8 @@ const navItems = [
 
 const navHeight = 10;
 
-export const Navbar = () => {
+export const Navbar = ({ isSignedIn }) => {
+    console.log("isSignedIn prop:", isSignedIn);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -44,6 +46,10 @@ export const Navbar = () => {
                                 {item.name}
                             </a>
                         ))}
+                        
+                            {isSignedIn ? <LogoutButton />
+                                        : <a href={"#login"} className="cosmic-button">Log In</a>
+                            }
                     </div>
 
                     {/* mobile nav */}
@@ -63,6 +69,7 @@ export const Navbar = () => {
                                       )
                                     }
                     >
+                        
                         <div className="flex flex-col space-y-8 text-xl">
                             {navItems.map((item, key) => (
                                 <a href={item.href} 
@@ -72,6 +79,9 @@ export const Navbar = () => {
                                     {item.name}
                                 </a>
                             ))}
+                            {isSignedIn ? <LogoutButton />
+                                        : <a href={"#login"} className="cosmic-button">Log In</a>
+                            }
                         </div>
                     </div>
                 </div>

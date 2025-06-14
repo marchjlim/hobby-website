@@ -1,27 +1,4 @@
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-
-
 export const ContactSection = () => {
-    const { toast } = useToast();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-
-    const handleSubmit = (event) => {
-        event.preventDefault();
-
-        setIsSubmitting(true);
-
-        setTimeout(() => {
-            toast({
-                title: "Message Sent!",
-                description: "Thank you for your message.",
-            })
-            
-            setIsSubmitting(false);
-        }, 1500);
-
-    }
 
     return <section id="contact" className="py-24 relative bg-secondary/30">
         <div className="container max-w-5xl mx-auto">

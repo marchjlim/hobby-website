@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "../supabase-client"; // Adjust path if needed
 import { useLocation } from "react-router-dom";
-import { DeleteListingButton } from "./DeleteListingButton";
-import { EditListingButton } from "./EditListingButton";
 import { ListingCard } from "./ListingCard";
 
 
