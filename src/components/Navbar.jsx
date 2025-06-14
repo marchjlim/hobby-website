@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { LogoutButton } from "./LogoutButton";
+import { useNavigate } from "react-router-dom";
 const navItems = [
     {name: "Home", href: "#hero"},
     {name: "About", href: "#about"},
@@ -12,8 +13,9 @@ const navItems = [
 
 const navHeight = 10;
 
-export const Navbar = ({ isSignedIn }) => {
+export const Navbar = ({ isSignedIn, isAdmin }) => {
     console.log("isSignedIn prop:", isSignedIn);
+    console.log("isAdmin prop:", isAdmin);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -25,6 +27,21 @@ export const Navbar = ({ isSignedIn }) => {
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    const AdminButton = () => {
+        const navigate = useNavigate();
+
+        const navigateAdmin = () => {
+            navigate("/secret-admin-page");
+        }
+
+        return (
+            <button onClick={navigateAdmin} className="cosmic-button ml-4">
+                Admin Page
+            </button>
+        );
+    };
+
     return <nav className=
                     {cn("fixed w-full z-40 transition-all duration-300",
                         isScrolled ? "py-3 bg-background/80 backdrop-blur-md shadow-xs"
@@ -50,6 +67,7 @@ export const Navbar = ({ isSignedIn }) => {
                             {isSignedIn ? <LogoutButton />
                                         : <a href={"#login"} className="cosmic-button">Log In</a>
                             }
+                            {isAdmin && <AdminButton />}
                     </div>
 
                     {/* mobile nav */}
@@ -82,6 +100,7 @@ export const Navbar = ({ isSignedIn }) => {
                             {isSignedIn ? <LogoutButton />
                                         : <a href={"#login"} className="cosmic-button">Log In</a>
                             }
+                            {isAdmin && <AdminButton />}
                         </div>
                     </div>
                 </div>
