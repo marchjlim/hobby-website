@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { LogoutButton } from "./LogoutButton";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 const navItems = [
     {name: "Home", href: "#hero"},
     {name: "About", href: "#about"},
@@ -18,6 +18,7 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
     console.log("isAdmin prop:", isAdmin);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const isOnAdminPage = useLocation().pathname === "/secret-admin-page";
 
     useEffect(() => {
         const handleScroll = () => {
@@ -36,11 +37,25 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
         }
 
         return (
-            <button onClick={navigateAdmin} className="cosmic-button ml-4">
+            <button onClick={navigateAdmin} className="cosmic-button">
                 Admin Page
             </button>
         );
     };
+
+    const HomeButton = () => {
+        const navigate = useNavigate();
+
+        const navigateHome = () => {
+            navigate("/");
+        }
+
+        return (
+            <button onClick={navigateHome} className="cosmic-button">
+                Home Page
+            </button>
+        )
+    }
 
     return <nav className=
                     {cn("fixed w-full z-40 transition-all duration-300",
@@ -67,7 +82,7 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
                             {isSignedIn ? <LogoutButton />
                                         : <a href={"#login"} className="cosmic-button">Log In</a>
                             }
-                            {isAdmin && <AdminButton />}
+                            {isAdmin && (isOnAdminPage ? <HomeButton /> : <AdminButton />)}
                     </div>
 
                     {/* mobile nav */}
@@ -100,7 +115,7 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
                             {isSignedIn ? <LogoutButton />
                                         : <a href={"#login"} className="cosmic-button">Log In</a>
                             }
-                            {isAdmin && <AdminButton />}
+                            {isAdmin && (isOnAdminPage ? <HomeButton /> : <AdminButton />)}
                         </div>
                     </div>
                 </div>
