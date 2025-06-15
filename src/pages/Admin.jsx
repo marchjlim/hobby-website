@@ -59,23 +59,27 @@ export const Admin = () => {
         }
     }, [session]);
 
-    return (<div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-        
-        {/* Theme Toggle */}
-            <ThemeToggle />
-        {/* Background Effects */}
-            <StarBackground />
+    return <>
+                { !isAdmin ? <div> Invalid access </div>
+                           : 
+                           <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+                                {/* Theme Toggle */}
+                                    <ThemeToggle />
+                                {/* Background Effects */}
+                                    <StarBackground />
 
-        {/* Navbar */}
-            <Navbar isSignedIn={session} isAdmin={isAdmin} />
+                                {/* Navbar */}
+                                    <Navbar isSignedIn={session} isAdmin={isAdmin} />
 
-        {/* Main Content */}
-            <main>
-                <ListingsSection refreshFlag={refreshFlag} />
-                <ListingForm onListingCreated={triggerRefresh} />
-            </main>
+                                {/* Main Content */}
+                                    <main>
+                                        <ListingsSection refreshFlag={refreshFlag} />
+                                        <ListingForm onListingCreated={triggerRefresh} />
+                                    </main>
 
-        {/* Footer */}
-        <Footer />
-    </div>);
+                                {/* Footer */}
+                                <Footer />
+                            </div>
+                }
+            </>
 };
