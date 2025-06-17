@@ -11,6 +11,11 @@ const navItems = [
     {name: "FAQ", href: "#faq"},
 ];
 
+const adminNavItems = [
+    {name: "Listings", href: "#listings"},
+    {name: "Tags", href:"#tags"},
+];
+
 const navHeight = 10;
 
 export const Navbar = ({ isSignedIn, isAdmin }) => {
@@ -72,7 +77,7 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
 
                     {/* desktop nav */}
                     <div className="hidden md:flex space-x-8">
-                        {navItems.map((item, key) => (
+                        {(isOnAdminPage ? adminNavItems : navItems).map((item, key) => (
                             <a href={item.href} key={key} 
                                 className="text-foreground/80 hover:text-primary transition-colors duration-300">
                                 {item.name}
@@ -104,7 +109,7 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
                     >
                         
                         <div className="flex flex-col space-y-8 text-xl">
-                            {navItems.map((item, key) => (
+                            {(isOnAdminPage ? adminNavItems : navItems).map((item, key) => (
                                 <a href={item.href} 
                                    key={key} 
                                    className="text-foreground/80 hover:text-primary transition-colors duration-300"

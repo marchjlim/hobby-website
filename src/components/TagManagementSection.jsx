@@ -24,7 +24,10 @@ export const TagManagementSection = ({ refreshFlag, onTagUpdate }) => {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
             Listing <span className="text-primary"> Tags</span>
             </h2>
-            
+
+            <h1 className="text-1xl md:text-2xl font-semibold mb-4 text-center">
+                Edit or remove existing tags
+            </h1>
             <div className="flex flex-wrap justify-center gap-2 mb-12">
                 {tags.map((tag, key) => (
                     <TagManagementCard key={key} tag={tag} onTagUpdate={onTagUpdate} />
