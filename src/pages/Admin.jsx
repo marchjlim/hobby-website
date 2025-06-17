@@ -6,10 +6,11 @@ import { ListingsSection } from "../components/ListingsSection";
 import { ListingForm } from "../components/ListingForm";
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase-client";
+import { useNavigate } from "react-router-dom";
 
 export const Admin = () => {
     const [refreshFlag, setRefreshFlag] = useState(false);
-    const triggerRefresh = () => setRefreshFlag(prev => !prev);
+    const triggerRefresh = async () => setRefreshFlag(prev => !prev);
     
 
     const [session, setSession] = useState(null);
@@ -52,15 +53,25 @@ export const Admin = () => {
                 return data.is_admin;
             }
             
-            const adminStatus = fetchAdminStatus(user.id);
-            setIsAdmin(adminStatus);
+            fetchAdminStatus(user.id).then((adminStatus) => {
+                setIsAdmin(adminStatus);
+            });
         } else {
             setIsAdmin(false);
         }
     }, [session]);
 
+    const navigate = useNavigate();
+    const redirectHome = () => {
+        navigate("/");
+    }
+
     return <>
-                { !isAdmin ? <div> Invalid access </div>
+                { !isAdmin ? <div>
+                                <h3 className="font-bold text-3xl mb-10"> Invalid Access </h3>
+                                <button onClick={redirectHome} className="cosmic-button"> Back to Home </button>
+                             </div>
+                             
                            : 
                            <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
                                 {/* Theme Toggle */}
