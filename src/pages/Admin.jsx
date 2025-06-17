@@ -7,6 +7,7 @@ import { ListingForm } from "../components/ListingForm";
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase-client";
 import { useNavigate } from "react-router-dom";
+import { TagManagementSection } from "../components/TagManagementSection";
 
 export const Admin = () => {
     const [refreshFlag, setRefreshFlag] = useState(false);
@@ -86,6 +87,7 @@ export const Admin = () => {
                                     <main>
                                         <ListingsSection refreshFlag={refreshFlag} />
                                         <ListingForm onListingCreated={triggerRefresh} />
+                                        <TagManagementSection refreshFlag={refreshFlag} onTagUpdate={triggerRefresh} />
                                     </main>
 
                                 {/* Footer */}
