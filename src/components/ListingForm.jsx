@@ -103,6 +103,11 @@ export const ListingForm = ({ onListingCreated }) => {
 
         await fetchAllTags();
         await onListingCreated();
+
+        toast({
+                    title: "Listing created",
+                    description: "Your listing has been successfully created",
+                });
     };
 
     const [tags, setTags] = useState([]);
@@ -152,9 +157,10 @@ export const ListingForm = ({ onListingCreated }) => {
                 <span className="text-secondary text-lg md:text-1xl font-semibold">
                         Existing tags:
                 </span>
-                <div className="flex flex-row gap-2 w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
+                <div className="flex flex-row gap-2 w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary overflow-x-auto whitespace-nowrap">
                     {allTags.map((tag) => (
-                        <button className="tag rounded-full border-1" 
+                        <button type="button"
+                                className="tag rounded-full border-1" 
                                 onClick={() => addPredefinedTag(tag)}>
                                     {tag.text}
                         </button>
