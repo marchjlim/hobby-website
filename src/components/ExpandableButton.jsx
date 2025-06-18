@@ -23,10 +23,10 @@ export const ExpandableButton = ({
       <div
         className={cn(
             "transition-all duration-300 overflow-hidden px-4",
-            isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            isOpen ? "max-h-96 opacity-100 overflow-y-auto" : "max-h-0 opacity-0"
         )}
       >
-        <div className="text-muted-foreground text-left text-sm"><p>{content}</p></div>
+        <div className="text-muted-foreground text-left text-sm">{content}</div>
       </div>
     </div>
   );
