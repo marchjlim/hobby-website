@@ -14,7 +14,7 @@ export const HeroSection = () => {
                 </h1>
 
                 <p className="text-lg md:text-xl text-muted-foreground max-2-2xl mx-auto opacity:0 animate-fade-in-delay-3">
-                    A fellow gunpla addict, and seller.
+                    A fellow gunpla addict.
                 </p>
 
                 <div>

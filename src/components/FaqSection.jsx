@@ -2,11 +2,12 @@ import { ExpandableButton } from "./ExpandableButton"
 
 const questions_and_answers = [
     {index: 1, question: "Are your kits authentic?", answer: "Yes, everything I sell is authentic unless otherwise stated."},
-    {index: 2, question: "Do you actually build gunpla?", answer: "Yes, like you, I also enjoy plamo, as my name would suggest."},
-    {index: 3, question: "Why are your kits so expensive?", answer: "I try to keep prices competitive but ultimately, the prices are based on the rarity of the kit."},
-    {index: 4, question: "Are you able to do delivery?", answer: "Currently only via lalamove or grab, as I do not have materials for other delivery services right now."},
-    {index: 5, question: "Can you notify me on WhatsApp/other platforms when my preorder arrives?", answer: "No. I have too many customers, and it will be hard for me to keep track of all their phone numbers and their orders. Hence I only communicate via Carousell."},
-    {index: 6, question: "I have multiple preorders that arrive on different months. Can I collect them together?", answer: "No. The kits take up space and I will not hold them. Please collect within the stipulated timeline."}
+    {index: 2, question: "Do you actually build gunpla?", answer: "Yep, like you, I also enjoy plamo. I'm not just a seller."},
+    {index: 3, question: "Are you able to do delivery?", answer: "Currently delivery is only via lalamove or grab express, as I do not have materials for other delivery services right now."},
+    {index: 4, question: "Can you notify me on WhatsApp/other platforms when my preorder arrives?", answer: "No. There are too many buyers, and it will be hard for me to keep track of everyone's phone numbers and orders. Hence I only communicate via Carousell."},
+    {index: 5, question: "I have multiple preorders that arrive on different months. Can I collect them together?", answer: "No. The kits take up space and I will not hold them. Please collect within the stipulated timeline."},
+    {index: 6, question: "I want to preorder from you, can we arrange a meetup time when the item arrives?", answer: "This depends on how long it takes for the order to come. I cannot predict my availability, so meetups are usually arranged when the item arrives."},
+    {index: 8, question: "Is the price negotiable?", answer: "Depends on the item, but generally no unless you are buying multiple items or are a regular customer."},
 ]
 
 export const FaqSection = () => {
@@ -20,7 +21,7 @@ export const FaqSection = () => {
                 </h1>
 
                 <p className="text-lg md:text-xl text-muted-foreground max-2-2xl mx-auto opacity:0 animate-fade-in-delay-3">
-                    Some questions I've been asked a few times over carousell or in real life during meetups.
+                    Some questions I've been asked a few times over carousell or during meetups.
                 </p>
                 
                 <div className="grid grid-rows-1 sm:grid-rows-2 lg:grid-rows-3 gap-6">
