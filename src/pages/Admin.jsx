@@ -2,13 +2,13 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { StarBackground } from "../components/StarBackground";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
-import { ListingsSection } from "../components/ListingsSection";
-import { ListingForm } from "../components/ListingForm";
+import { ListingsSection } from "../components/listings/ListingsSection";
+import { ListingForm } from "../components/listings/ListingForm";
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase-client";
 import { useNavigate } from "react-router-dom";
-import { TagManagementSection } from "../components/TagManagementSection";
-import { TagForm } from "../components/TagForm";
+import { TagManagementSection } from "../components/listings/TagManagementSection";
+import { TagForm } from "../components/listings/TagForm";
 
 export const Admin = () => {
     const [refreshFlag, setRefreshFlag] = useState(false);

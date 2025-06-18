@@ -6,7 +6,7 @@ import { AboutSection } from "../components/AboutSection";
 import { ContactSection } from "../components/ContactSection";
 import { Footer } from "../components/Footer";
 import { FaqSection } from "../components/FaqSection";
-import { ListingsSection } from "../components/ListingsSection";
+import { ListingsSection } from "../components/listings/ListingsSection";
 import { AuthForm } from "../components/AuthForm";
 import { useEffect, useState } from 'react';
 import { supabase } from "../supabase-client";

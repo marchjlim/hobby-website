@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { supabase } from "../supabase-client";
+import { supabase } from "../../supabase-client";
 import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
 import { Trash, X } from 'lucide-react';

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { supabase } from "../supabase-client";
+import { supabase } from "../../supabase-client";
 import { Pencil, X } from "lucide-react";
 
 export const EditTagForm = ({ tagName, onTagEdited, onCancel }) => {
