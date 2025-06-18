@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { supabase } from "../supabase-client"; // Adjust path if needed
+import { supabase } from "../supabase-client";
 import { useLocation } from "react-router-dom";
-import { ListingCard } from "./ListingCard";
+import { ListingsContainer } from "./ListingsContainer";
 
 
 // const listings = [
@@ -27,7 +27,7 @@ const categories = [
     "Metal build",
 ];
 
-export const ListingsSection = ({ refreshFlag }) => {
+export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
     const [activeTag, setActiveTag] = useState("all");
 
     const [listings, setListings] = useState([]);
@@ -105,14 +105,11 @@ export const ListingsSection = ({ refreshFlag }) => {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredListings.map((listing, key) => 
-                    <ListingCard listing={listing} key={key} 
-                                 tags={(tagMap[listing.id] || [])} fetchListings={fetchListings}
-                                 isAdminPage={isAdminPage} 
-                    />
-                )}
-            </div>
+            <ListingsContainer listingsToDisplay={filteredListings} 
+                               tagMap={tagMap} 
+                               isModifiable={isAdminPage}
+                               triggerRefresh={triggerRefresh}
+            />
         </div>
     </section>
 }

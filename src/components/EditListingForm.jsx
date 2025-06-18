@@ -2,9 +2,9 @@ import { useState } from "react"
 import { supabase } from "../supabase-client";
 import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
-import { Trash } from 'lucide-react';
+import { Trash, X } from 'lucide-react';
 
-export const EditListingForm = ({ listing, initialListingTags, onListingEdited }) => {
+export const EditListingForm = ({ listing, initialListingTags, onListingEdited, onCancel }) => {
     // convert each tag to the structure of ReactTagInput
     let formattedInitialListingTags = initialListingTags.map(tag => ({ id: tag, text: tag }));
     const [formData, setFormData] = useState({
@@ -96,8 +96,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited }
             }
         }
 
-        // change to onListingUpdated
-        await onListingEdited();
+        onListingEdited();
     };
 
     const addTag = (tag) => {
@@ -128,7 +127,17 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited }
     return (
         <form onSubmit={handleUpdate} className="flex flex-col w-full space-y-4">
             <div className="flex flex-col mb-4 gap-2">
-                <span className="text-secondary text-xl font-semibold">Listing name</span>
+                <div className="relative w-full text-center">
+                    <div className="text-secondary text-xl font-semibold">Listing name</div>
+                    <button className="absolute top-0 right-0 group" onClick={onCancel}>
+                        <X className="text-red-400"/>
+                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block 
+                                        bg-black text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
+                                            Cancel edit
+                        </span>
+                    </button>
+                </div>
+                
                 <input name="name" 
                        type="text" 
                        placeholder="Listing name" 
@@ -141,7 +150,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited }
                 <span className="text-secondary text-lg md:text-1xl font-semibold">
                         Listing tags:
                 </span>
-                <div className="flex flex-row gap-2 w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
+                <div className="flex flex-row gap-2 w-full px-4 py-3 overflow-x-auto rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary">
                     {allTags.map((tag) => (
                         <span className="tag rounded-full border-1">
                             {tag.text}

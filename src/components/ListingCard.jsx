@@ -2,24 +2,57 @@ import { useState } from "react";
 import { DeleteListingButton } from "./DeleteListingButton"
 import { EditListingButton } from "./EditListingButton"
 import { EditListingForm } from "./EditListingForm";
+import { Check } from "lucide-react";
 
 
-export const ListingCard = ({ listing, key, tags, fetchListings, isAdminPage }) => {
+export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
+                              isSelectable = false, onSelect, onUnselect, selectedListingIds }) => {
     const [isEditing, setIsEditing] = useState(false);
+
+    let isSelected = selectedListingIds?.includes(listing.id);
+
+    const handleSelect = () => {
+        onSelect(listing);
+    }
+    const handleUnselect = () => {
+        onUnselect(listing);
+    }
+
+    const SelectButton = () => (
+        <button
+            onClick={handleSelect}
+            className="w-6 h-6 rounded-full border-2 border-primary bg-transparent hover:bg-primary/30 transition"
+            aria-label="Select listing"
+        />
+    );
+
+
+    const UnselectButton = () => (
+        <button
+            onClick={handleUnselect}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-primary border-2 border-primary text-white hover:bg-primary/80 transition"
+            aria-label="Unselect listing"
+        >
+            <Check className="w-4 h-4" />
+        </button>
+    );
+
+
 
     return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
                                           onListingEdited={async () => {
-                                            await fetchListings();
+                                            triggerRefresh();
                                             setIsEditing(false);
                                           }}/>)
                             : (<>
-                                <div className="text-left mb-4 h-14 flex justify-between items-center">
-                                    <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
-                                    <span className="flex flex-row gap-2">
-                                        {isAdminPage && <EditListingButton listing={listing} onEdited={() => setIsEditing(true)} />}
-                                        {isAdminPage && <DeleteListingButton listing={listing} onDeleted={fetchListings} />}
-                                    </span>
+                                <div className="text-left mb-4 h-14 flex justify-between items-start">
+                                    <h3 className="font-semibold text-lg md:text-xl break-words whitespace-normal w-full"> {listing.name} </h3>
+                                    <div className="flex flex-row gap-2">
+                                        {isSelectable && (isSelected ? <UnselectButton /> : <SelectButton />)}
+                                        {isModifiable && <EditListingButton listing={listing} onEdited={() => setIsEditing(true)} />}
+                                        {isModifiable && <DeleteListingButton listing={listing} onDeleted={triggerRefresh} />}
+                                    </div>
                                     
                                 </div>
                                     
