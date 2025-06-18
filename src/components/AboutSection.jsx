@@ -16,8 +16,10 @@ export const AboutSection = () => {
 
                     <p className="text-muted-foreground">
                         I am currently a student at NUS. Gunpla building and collecting 
-                        is what I do when I'm free. I mostly collect limited kits, especially
-                        special coating ones. That's why I almost exclusively sell limited kits.
+                        is what I do when I'm free. I mostly collect limited kits, which
+                        is the reason why almost all the kits I sell are limited release
+                        and not regular release. The exceptions being some china-exclusives
+                        and regular releases which I find to be exceptionally good.
                     </p>
 
                     <p className="text-muted-foreground">
