@@ -4,13 +4,13 @@ import { EditListingButton } from "./EditListingButton"
 import { EditListingForm } from "./EditListingForm";
 
 
-export const ListingCard = ({ listing, key, tags, fetchListings, isAdminPage }) => {
+export const ListingCard = ({ listing, key, tags, isAdminPage, triggerRefresh }) => {
     const [isEditing, setIsEditing] = useState(false);
 
     return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
                                           onListingEdited={async () => {
-                                            await fetchListings();
+                                            triggerRefresh();
                                             setIsEditing(false);
                                           }}/>)
                             : (<>
@@ -18,7 +18,7 @@ export const ListingCard = ({ listing, key, tags, fetchListings, isAdminPage }) 
                                     <h3 className="font-semibold text-lg md:text-xl line-clamp-2"> {listing.name} </h3>
                                     <span className="flex flex-row gap-2">
                                         {isAdminPage && <EditListingButton listing={listing} onEdited={() => setIsEditing(true)} />}
-                                        {isAdminPage && <DeleteListingButton listing={listing} onDeleted={fetchListings} />}
+                                        {isAdminPage && <DeleteListingButton listing={listing} onDeleted={triggerRefresh} />}
                                     </span>
                                     
                                 </div>

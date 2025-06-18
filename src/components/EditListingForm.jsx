@@ -97,7 +97,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited }
         }
 
         // change to onListingUpdated
-        await onListingEdited();
+        onListingEdited();
     };
 
     const addTag = (tag) => {
