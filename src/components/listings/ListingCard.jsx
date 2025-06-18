@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { DeleteListingButton } from "./DeleteListingButton"
 import { EditListingButton } from "./EditListingButton"
 import { EditListingForm } from "./EditListingForm";
 import { Check } from "lucide-react";
+import { DeleteListingButton } from "./DeleteListingButton";
 
 
 export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,

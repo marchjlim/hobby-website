@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../supabase-client";
+import { supabase } from "../../supabase-client";
 import { TagManagementCard } from "./TagManagementCard";
 
 export const TagManagementSection = ({ refreshFlag, onTagUpdate }) => {
