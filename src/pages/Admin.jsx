@@ -86,7 +86,7 @@ export const Admin = () => {
 
                                 {/* Main Content */}
                                     <main>
-                                        <ListingsSection refreshFlag={refreshFlag} />
+                                        <ListingsSection refreshFlag={refreshFlag} triggerRefresh={triggerRefresh} />
                                         <ListingForm onListingCreated={triggerRefresh} />
                                         <TagManagementSection refreshFlag={refreshFlag} onTagUpdate={triggerRefresh} />
                                         <TagForm onTagCreated={triggerRefresh} />
