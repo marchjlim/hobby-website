@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { supabase } from "../supabase-client"; // Adjust path if needed
+import { supabase } from "../supabase-client";
 import { useLocation } from "react-router-dom";
-import { ListingCard } from "./ListingCard";
 import { ListingsContainer } from "./ListingsContainer";
 
 
@@ -108,7 +107,7 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
 
             <ListingsContainer listingsToDisplay={filteredListings} 
                                tagMap={tagMap} 
-                               isAdminPage={isAdminPage}
+                               isModifiable={isAdminPage}
                                triggerRefresh={triggerRefresh}
             />
         </div>
