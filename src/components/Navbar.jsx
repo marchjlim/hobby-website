@@ -63,7 +63,7 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
     }
 
     return <nav className=
-                    {cn("fixed w-full z-40 transition-all duration-300",
+                    {cn("fixed w-full z-40 transition-all duration-300 bg-card",
                         isScrolled ? "py-3 bg-background/80 backdrop-blur-md shadow-xs"
                                    : "py-5")
                     }
