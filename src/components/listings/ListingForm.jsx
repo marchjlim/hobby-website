@@ -8,7 +8,9 @@ export const ListingForm = ({ onListingCreated }) => {
     const [formData, setFormData] = useState({
         listingName: "",
         listingImg: "",
-        listingTags: [],    
+        listingTags: [],
+        listingPrice: 0,
+        listingLink: ""    
     });
 
     const [allTags, setAllTags] = useState([]);
@@ -68,7 +70,9 @@ export const ListingForm = ({ onListingCreated }) => {
         // insert into listings
         const { error, data } = await supabase.from("Listings").insert(
                                                                {name: formData.listingName, 
-                                                                image_url: imageUrl})
+                                                                image_url: imageUrl,
+                                                                price: formData.listingPrice,
+                                                                link: formData.listingLink})
                                                         .select()
                                                         .single();
                                 
@@ -99,6 +103,8 @@ export const ListingForm = ({ onListingCreated }) => {
             listingName:"",
             listingImg: "",
             listingTags: [],
+            listingPrice: 0,
+            listingLink: "" 
         });
 
         await fetchAllTags();
@@ -151,6 +157,29 @@ export const ListingForm = ({ onListingCreated }) => {
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
+
+                <span className="text-secondary text-2xl md:text-3xl font-semibold">Price</span>
+                <input name="price" 
+                       type="number" 
+                       placeholder="0" 
+                       required
+                       className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                       value={formData.listingPrice} 
+                       onChange={(event) => {
+                        setFormData((prev) => ({...prev, listingPrice: event.target.value }));
+                       }} />
+                
+                <span className="text-secondary text-2xl md:text-3xl font-semibold">Link to carousell listing</span>
+                <input name="link" 
+                       type="url" 
+                       placeholder="https://..." 
+                       required
+                       className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                       value={formData.listingLink} 
+                       onChange={(event) => {
+                        setFormData((prev) => ({...prev, listingLink: event.target.value }));
+                       }} />
+
                 <span className="text-secondary text-2xl md:text-3xl font-semibold">
                     Choose some existing tags or add your own
                 </span>
