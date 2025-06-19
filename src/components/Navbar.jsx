@@ -9,6 +9,7 @@ const navItems = [
     {name: "Listings", href: "#listings"},
     {name: "Contact", href: "#contact"},
     {name: "FAQ", href: "#faq"},
+    {name: "Changelog", href: "#changelog"},
 ];
 
 const adminNavItems = [
