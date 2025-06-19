@@ -10,6 +10,7 @@ import { ListingsSection } from "../components/listings/ListingsSection";
 import { AuthForm } from "../components/AuthForm";
 import { useEffect, useState } from 'react';
 import { supabase } from "../supabase-client";
+import { ChangelogSection } from "../components/ChangelogSection";
 
 
 export const Home = () => {
@@ -79,6 +80,7 @@ export const Home = () => {
                 <ContactSection />
                 <FaqSection />
                 <div className="mt-20">{!session && <AuthForm className="py-20"/>}</div>
+                <ChangelogSection />
             </main>
 
         {/* Footer */}
