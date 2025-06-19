@@ -1,5 +1,5 @@
 import { Trash } from "lucide-react"
-import { supabase } from "../supabase-client"
+import { supabase } from "../../supabase-client"
 
 
 export const DeleteTagButton = ({ tagName, onDeleted }) => {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
-import { supabase } from "../supabase-client";
+import { supabase } from "../../supabase-client";
 import { useToast } from "@/hooks/use-toast";
 import { ListingsContainer } from "./ListingsContainer";
-import { ExpandableButton } from "./ExpandableButton";
-import { DropdownWithComponent } from "./DropdownWithComponent";
+import { DropdownWithComponent } from "../DropdownWithComponent";
 
 export const TagForm = ({ refreshFlag, onTagCreated }) => {
+    
     const [formData, setFormData] = useState({
         tagName: "",
     });

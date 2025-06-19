@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { DeleteListingButton } from "./DeleteListingButton"
 import { EditListingButton } from "./EditListingButton"
 import { EditListingForm } from "./EditListingForm";
 import { Check } from "lucide-react";
+import { DeleteListingButton } from "./DeleteListingButton";
 
 
 export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
@@ -37,14 +37,39 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
         </button>
     );
 
+    const PriceTag = ({ price, currency = "SGD", className = "" }) => {
+        return (
+            <div
+            className={`inline-flex items-center px-3 py-1 rounded-full bg-primary/80 text-white text-sm font-semibold shadow-sm ${className}`}
+            >
+            {currency} ${price}
+            </div>
+        );
+    };
+
+    const CarousellLink = ({ link }) => {
+        return (
+            <a href={link} 
+               target="_blank"
+               title="View listing on Carousell"
+               className="text-muted-foreground hover:text-primary transition-colors">
+                    <img src="/public/icons/Carousell-logo-square.png" className="h-6 w-6 rounded" />
+            </a>
+        );
+    }
+
 
 
     return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
-                                          onListingEdited={async () => {
-                                            triggerRefresh();
-                                            setIsEditing(false);
-                                          }}/>)
+                                                onListingEdited={async () => {
+                                                    triggerRefresh();
+                                                    setIsEditing(false);
+                                                }}
+                                                onCancel={() => setIsEditing(false)}
+                                />
+                              )
+
                             : (<>
                                 <div className="text-left mb-4 h-14 flex justify-between items-start">
                                     <h3 className="font-semibold text-lg md:text-xl break-words whitespace-normal w-full"> {listing.name} </h3>
@@ -56,9 +81,16 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                                     
                                 </div>
                                     
-                                <img src={listing.image_url} 
+                                
+                                <div className="flex flex-col gap-2 items-start">
+                                    <img src={listing.image_url} 
                                         className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
-                                />
+                                     />
+                                    <div className="flex w-full justify-between">
+                                        <PriceTag price={listing.price} />
+                                        <CarousellLink link={listing.link} />
+                                    </div>
+                                </div>
                                 <div className="mt-4 flex flex-wrap">
                                     {/*specify empty array here for listings with no tags to appear.*/}
                                     {tags.map((tag) => (

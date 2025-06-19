@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { supabase } from "../supabase-client";
+import { supabase } from "../../supabase-client";
 import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
 import { Trash, X } from 'lucide-react';
@@ -11,6 +11,8 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         listingName: listing.name,
         listingImg: listing.image_url,
         listingTags: formattedInitialListingTags,
+        listingPrice: listing.listingPrice,
+        listingLink: listing.listingLink,
     });
 
     // formData should maintain list of all tags that the user wants to have in the updated listing
@@ -56,7 +58,9 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         const { error } = await supabase.from("Listings")
                                         .update({ name: formData.listingName, 
                                                   image_url: updatedImageUrl ? updatedImageUrl
-                                                                             : formData.listingImg })
+                                                                             : formData.listingImg,
+                                                  price: formData.listingPrice,
+                                                  link: formData.listingLink })
                                         .eq("id", listing.id);
 
                                 
@@ -129,7 +133,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
             <div className="flex flex-col mb-4 gap-2">
                 <div className="relative w-full text-center">
                     <div className="text-secondary text-xl font-semibold">Listing name</div>
-                    <button className="absolute top-0 right-0 group" onClick={onCancel}>
+                    <button type="button" className="absolute top-0 right-0 group" onClick={onCancel}>
                         <X className="text-red-400"/>
                         <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block 
                                         bg-black text-white text-xs rounded px-2 py-1 z-10 whitespace-nowrap">
@@ -147,6 +151,28 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
+
+                <input name="price" 
+                       type="number" 
+                       placeholder="0" 
+                       required
+                       className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                       value={formData.listingPrice} 
+                       onChange={(event) => {
+                        setFormData((prev) => ({...prev, listingPrice: event.target.value }));
+                       }} />
+
+                <input name="link" 
+                       type="url" 
+                       placeholder="https://..." 
+                       required
+                       className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                       value={formData.listingLink} 
+                       onChange={(event) => {
+                        setFormData((prev) => ({...prev, listingLink: event.target.value }));
+                       }} />
+
+                
                 <span className="text-secondary text-lg md:text-1xl font-semibold">
                         Listing tags:
                 </span>
