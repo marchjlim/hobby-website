@@ -30,7 +30,8 @@ export const ThemeToggle = () => {
     }
 
     return <button 
-                onClick={toggleTheme} 
+                onClick={toggleTheme}
+                title={isDarkMode ? "Enable light mode" : "Enable dark mode"} 
                 className={cn(
                             "fixed max-sm:hidden top-0 right-0 z-50 p-2 rounded-full transition-colors duration-300",
                             "focus:outlin-hidden"

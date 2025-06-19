@@ -78,7 +78,7 @@ export const Home = () => {
                 <ListingsSection />
                 <ContactSection />
                 <FaqSection />
-                {!session && <AuthForm />}
+                <div className="mt-20">{!session && <AuthForm className="py-20"/>}</div>
             </main>
 
         {/* Footer */}
