@@ -7,16 +7,17 @@ import { Trash, X } from 'lucide-react';
 export const EditListingForm = ({ listing, initialListingTags, onListingEdited, onCancel }) => {
     // convert each tag to the structure of ReactTagInput
     let formattedInitialListingTags = initialListingTags.map(tag => ({ id: tag, text: tag }));
+
     const [formData, setFormData] = useState({
         listingName: listing.name,
         listingImg: listing.image_url,
         listingTags: formattedInitialListingTags,
-        listingPrice: listing.listingPrice,
-        listingLink: listing.listingLink,
+        listingPrice: listing.price,
+        listingLink: listing.link,
+        listingIsPreorder: listing.is_preorder,
+        listingDeposit: listing.deposit,
+        listingArrival: listing.arrival_date,
     });
-
-    // formData should maintain list of all tags that the user wants to have in the updated listing
-    // backend should maintain list of tags that user wants to remove, and tags that user wants to add
 
     const [allTags, setAllTags] = useState(formattedInitialListingTags);
     const [updatedListingImage, setUpdatedListingImage] = useState(null);
@@ -30,7 +31,6 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         }
     };
 
-    // update image?
     const uploadImage = async (file) => {
         const filePath = `${file.name}-${Date.now()}`; 
         const {error} = await supabase.storage.from("listing-images").upload(filePath, file);
@@ -60,7 +60,10 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                                                   image_url: updatedImageUrl ? updatedImageUrl
                                                                              : formData.listingImg,
                                                   price: formData.listingPrice,
-                                                  link: formData.listingLink })
+                                                  link: formData.listingLink,
+                                                  is_preorder: formData.listingIsPreorder,
+                                                  deposit: formData.listingDeposit,
+                                                  arrival_date: formData.listingArrival })
                                         .eq("id", listing.id);
 
                                 
@@ -126,6 +129,31 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         setAllTags([]);
     }
 
+    const PreorderCheckbox = () => {
+        return <>
+            <label className="flex items-center gap-2">
+                <span className="text-sm font-medium">Preorder item?</span>
+                <div className="relative">
+                    <input
+                    type="checkbox"
+                    checked={formData.listingIsPreorder}
+                    onChange={(e) =>
+                        setFormData((prev) => ({
+                        ...prev,
+                        listingIsPreorder: e.target.checked,
+                        }))
+                    }
+                    className="peer sr-only"
+                    />
+                    <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
+                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
+                </div>
+                
+
+            </label>
+        </>
+    };
+
     
 
     return (
@@ -161,6 +189,38 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingPrice: event.target.value }));
                        }} />
+
+                <PreorderCheckbox />
+                {formData.listingIsPreorder && <input
+                                                name="deposit"
+                                                type="number"
+                                                placeholder="Deposit amount"
+                                                required
+                                                className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                                                value={formData.listingDeposit}
+                                                onChange={(event) => {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    listingDeposit: event.target.value,
+                                                }));
+                                                }}
+                                            />
+                }
+                {formData.listingIsPreorder && <input
+                                                    name="arrival"
+                                                    type="text"
+                                                    placeholder="Arrival date"
+                                                    required
+                                                    className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                                                    value={formData.listingArrival}
+                                                    onChange={(event) => {
+                                                    setFormData((prev) => ({
+                                                        ...prev,
+                                                        listingArrival: event.target.value,
+                                                    }));
+                                                    }}
+                                                />
+                }
 
                 <input name="link" 
                        type="url" 
