@@ -18,23 +18,46 @@ export const AuthForm = () => {
         let authData = null;
 
         if (isSignUp) {
-            const { error: signUpError, data } = await supabase.auth.signUp({ email, password });
-            if (signUpError) {
-                toast({
-                    title: "Sign in error",
-                    description: signUpError.message,
-                    variant: "destructive",
-                });
-                setIsSubmitting(false);
-                return;
-            }
+          const { error: queryError, data: queryData } = await supabase.from("Users").select("*").eq("email", email);
+          if (queryError) {
+            toast({
+                  title: "Query error",
+                  description: queryError.message,
+                  variant: "destructive",
+              });
+            setIsSubmitting(false);
+            return;
+          } else if (queryData.length !== 0) {
+            toast({
+              title: "Account already exists",
+              description: "An account is already registered with this email.",
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            setFormData({
+                email: "",
+                password: "",
+            });
+            return;
+          }
 
-            if (data.user) {
-                await supabase.from("Users").upsert([
-                    { email: email, is_admin: false, auth_user_id: data.user.id }
-                ]);
-            }
-            authData = data;
+          const { error: signUpError, data } = await supabase.auth.signUp({ email, password });
+          if (signUpError) {
+              toast({
+                  title: "Sign in error",
+                  description: signUpError.message,
+                  variant: "destructive",
+              });
+              setIsSubmitting(false);
+              return;
+          }
+
+          if (data.user) {
+              await supabase.from("Users").upsert([
+                  { email: email, is_admin: false, auth_user_id: data.user.id }
+              ]);
+          }
+          authData = data;
 
         } else {
             const { error: signInError, data } = await supabase.auth.signInWithPassword({ email, password });
