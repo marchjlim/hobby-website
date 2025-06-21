@@ -21,7 +21,7 @@ export const DropdownWithComponent = ({ title, content }) => {
       {isOpen && (
         <div
           className={cn(
-            "mt-4 w-full max-h-[600px] overflow-auto bg-card border border-border rounded-lg shadow-lg p-4"
+            "mt-4 w-full w-[800px] relative left-1/2 transform -translate-x-1/2 max-h-[600px] overflow-auto bg-card border border-border rounded-lg shadow-lg p-4"
           )}
         >
           {content}

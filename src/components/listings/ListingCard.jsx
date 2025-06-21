@@ -95,7 +95,7 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                             : (<>
                             <div className="flex flex-col items-start">
                                 <div className="text-left gap-4 flex justify-between items-start w-full h-10">
-                                    <h3 className="font-semibold text-lg md:text-xl break-words whitespace-normal"> {listing.name} </h3>
+                                    <h3 className="w-full overflow-x-hidden font-semibold text-md md:text-lg break-words whitespace-normal"> {listing.name} </h3>
                                     <div className="flex flex-row gap-2">
                                         {isSelectable && (isSelected ? <UnselectButton /> : <SelectButton />)}
                                         {isModifiable && <EditListingButton listing={listing} onEdited={() => setIsEditing(true)} />}
@@ -103,19 +103,21 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                                     </div>
                                 </div>
                 
-                                {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} /> : <InStockBadge />}
                             </div>
 
                                     
                                 
-                                <div className="flex flex-col gap-2 items-start">
+                                <div className="flex flex-col gap-2 items-start mt-10">
                                     <img src={listing.image_url} 
                                         className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
                                      />
                                     <div className="flex w-full justify-between">
                                         <PriceTag price={listing.price} />
                                         <CarousellLink link={listing.link} />
+                                        
                                     </div>
+                                    
+                                    {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} /> : <InStockBadge />}
                                 </div>
                                 <div className="mt-4 flex flex-wrap">
                                     {/*specify empty array here for listings with no tags to appear.*/}
