@@ -40,25 +40,29 @@ export const Home = () => {
         console.log("Session updated:", session);
         const user = session?.user;
 
-        if (user) {
-            const fetchAdminStatus = async (userUUID) => {
-                const { data, error } = await supabase.from("Users")
-                                                      .select("is_admin")
-                                                      .eq("auth_user_id", userUUID)
-                                                      .single();
-                if (error) {
-                    console.log("Error fetching admin status for user:", error.message);
-                    return;
-                }
-
-                return data.is_admin;
+        const fetchAdminStatus = async (userUUID) => {
+            const { data, error } = await supabase.from("Users")
+                                                    .select("is_admin")
+                                                    .eq("auth_user_id", userUUID)
+                                                    .single();
+            if (error) {
+                console.log("Error fetching admin status for user:", error.message);
+                return;
             }
-            
-            const adminStatus = fetchAdminStatus(user.id);
-            setIsAdmin(adminStatus);
-        } else {
-            setIsAdmin(false);
+
+            return data.is_admin;
         }
+
+        const checkAdmin = async () => {
+            if (user) {
+                const adminStatus = await fetchAdminStatus(user.id);
+                setIsAdmin(adminStatus);
+            } else {
+                setIsAdmin(false);
+            }
+        }
+
+        checkAdmin();
     }, [session]);
     
     
