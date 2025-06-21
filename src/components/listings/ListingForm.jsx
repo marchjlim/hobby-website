@@ -115,6 +115,7 @@ export const ListingForm = ({ onListingCreated }) => {
             listingDeposit: 0,
             listingArrival: ""
         });
+        setTags([]);
 
         await fetchAllTags();
         await onListingCreated();
