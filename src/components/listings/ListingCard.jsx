@@ -53,7 +53,7 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                target="_blank"
                title="View listing on Carousell"
                className="text-muted-foreground hover:text-primary transition-colors">
-                    <img src="/public/icons/Carousell-logo-square.png" className="h-6 w-6 rounded" />
+                    <img src="icons/Carousell-logo-square.png" className="h-6 w-6 rounded" />
             </a>
         );
     }
