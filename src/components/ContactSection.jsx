@@ -17,7 +17,7 @@ export const ContactSection = () => {
                     <div className="space-y-6 flex flex-col items-center">
                         <div className="flex items-start space-x-4">
                             <div className="p-3 rounded-full bg-primary/10">
-                                <img src="/public/icons/Carousell-logo-square.png"
+                                <img src="icons/Carousell-logo-square.png"
                                      className="h-6 w-6 rounded" />
                             </div>
                             <div>
