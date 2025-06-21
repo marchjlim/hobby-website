@@ -115,7 +115,6 @@ export const TagForm = ({ refreshFlag, onTagCreated }) => {
                         setFormData((prev) => ({tagName: event.target.value }));
                     }} />
             </div>
-
             <DropdownWithComponent
                 title="Select listings to tag"
                 content={
