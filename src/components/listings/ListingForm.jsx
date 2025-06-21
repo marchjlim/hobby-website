@@ -10,7 +10,10 @@ export const ListingForm = ({ onListingCreated }) => {
         listingImg: "",
         listingTags: [],
         listingPrice: 0,
-        listingLink: ""    
+        listingLink: "",
+        listingIsPreorder: false,
+        listingDeposit: null,   
+        listingArrival: "",
     });
 
     const [allTags, setAllTags] = useState([]);
@@ -72,7 +75,10 @@ export const ListingForm = ({ onListingCreated }) => {
                                                                {name: formData.listingName, 
                                                                 image_url: imageUrl,
                                                                 price: formData.listingPrice,
-                                                                link: formData.listingLink})
+                                                                link: formData.listingLink,
+                                                                is_preorder: formData.listingIsPreorder,
+                                                                deposit: formData.listingDeposit,
+                                                                arrival_date: formData.listingArrival})
                                                         .select()
                                                         .single();
                                 
@@ -104,7 +110,10 @@ export const ListingForm = ({ onListingCreated }) => {
             listingImg: "",
             listingTags: [],
             listingPrice: 0,
-            listingLink: "" 
+            listingLink: "", 
+            listingIsPreorder: false,
+            listingDeposit: 0,
+            listingArrival: ""
         });
 
         await fetchAllTags();
@@ -141,7 +150,32 @@ export const ListingForm = ({ onListingCreated }) => {
         setTags([]);
     }
 
-    
+    const PreorderCheckbox = () => {
+        return <>
+            <label className="flex items-center gap-2">
+                <span className="text-sm font-medium">Preorder item?</span>
+                <div className="relative">
+                    <input
+                    type="checkbox"
+                    checked={formData.listingIsPreorder}
+                    onChange={(e) =>
+                        setFormData((prev) => ({
+                        ...prev,
+                        listingIsPreorder: e.target.checked,
+                        }))
+                    }
+                    className="peer sr-only"
+                    />
+                    <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
+                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
+                </div>
+                
+
+            </label>
+        </>
+    };
+
+
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col bg-card mx-auto px-100">
@@ -168,6 +202,38 @@ export const ListingForm = ({ onListingCreated }) => {
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingPrice: event.target.value }));
                        }} />
+                
+                <PreorderCheckbox />
+                {formData.listingIsPreorder && <input
+                                                name="deposit"
+                                                type="number"
+                                                placeholder="Deposit amount"
+                                                required
+                                                className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                                                value={formData.listingDeposit}
+                                                onChange={(event) => {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    listingDeposit: event.target.value,
+                                                }));
+                                                }}
+                                            />
+                }
+                {formData.listingIsPreorder && <input
+                                                    name="arrival"
+                                                    type="text"
+                                                    placeholder="Arrival date"
+                                                    required
+                                                    className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                                                    value={formData.listingArrival}
+                                                    onChange={(event) => {
+                                                    setFormData((prev) => ({
+                                                        ...prev,
+                                                        listingArrival: event.target.value,
+                                                    }));
+                                                    }}
+                                                />
+                }
                 
                 <span className="text-secondary text-2xl md:text-3xl font-semibold">Link to carousell listing</span>
                 <input name="link" 

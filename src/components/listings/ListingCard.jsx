@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { EditListingButton } from "./EditListingButton"
 import { EditListingForm } from "./EditListingForm";
-import { Check } from "lucide-react";
+import { Check, CheckCircle, Clock } from "lucide-react";
 import { DeleteListingButton } from "./DeleteListingButton";
 
 
@@ -58,6 +58,28 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
         );
     }
 
+    const PreorderBadge = ({ className = "", arrival, deposit }) => {
+        return (
+            <div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500 text-white text-sm font-semibold shadow-md ${className}`}
+            >
+            <Clock size={16} className="stroke-white" />
+            Preorder, arrival in {arrival}. Deposit: ${deposit}
+            </div>
+        );
+    };
+
+    const InStockBadge = ({ className = "" }) => {
+        return (
+            <div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500 text-white text-sm font-semibold shadow-md ${className}`}
+            >
+            <CheckCircle size={16} className="stroke-white" />
+            In Stock
+            </div>
+        );
+    };
+
 
 
     return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
@@ -71,15 +93,19 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                               )
 
                             : (<>
-                                <div className="text-left mb-4 h-14 flex justify-between items-start">
-                                    <h3 className="font-semibold text-lg md:text-xl break-words whitespace-normal w-full"> {listing.name} </h3>
+                            <div className="flex flex-col items-start">
+                                <div className="text-left gap-4 flex justify-between items-start w-full h-10">
+                                    <h3 className="font-semibold text-lg md:text-xl break-words whitespace-normal"> {listing.name} </h3>
                                     <div className="flex flex-row gap-2">
                                         {isSelectable && (isSelected ? <UnselectButton /> : <SelectButton />)}
                                         {isModifiable && <EditListingButton listing={listing} onEdited={() => setIsEditing(true)} />}
                                         {isModifiable && <DeleteListingButton listing={listing} onDeleted={triggerRefresh} />}
                                     </div>
-                                    
                                 </div>
+                
+                                {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} /> : <InStockBadge />}
+                            </div>
+
                                     
                                 
                                 <div className="flex flex-col gap-2 items-start">
