@@ -9,11 +9,14 @@ export const ListingForm = ({ onListingCreated }) => {
         listingName: "",
         listingImg: "",
         listingTags: [],
-        listingPrice: 0,
+        listingPrice: null,
+        carousellPrice: null,
         listingLink: "",
         listingIsPreorder: false,
+        listingIsRestocking: false,
         listingDeposit: null,   
         listingArrival: "",
+        listingTelegramLink:"https://t.me/plasticmethenjoyer",
     });
 
     const [allTags, setAllTags] = useState([]);
@@ -78,9 +81,13 @@ export const ListingForm = ({ onListingCreated }) => {
                                                                 link: formData.listingLink,
                                                                 is_preorder: formData.listingIsPreorder,
                                                                 deposit: formData.listingDeposit,
-                                                                arrival_date: formData.listingArrival})
-                                                        .select()
-                                                        .single();
+                                                                arrival_date: formData.listingArrival,
+                                                                is_restocking: formData.listingIsRestocking,
+                                                                carousell_price: formData.carousellPrice,
+                                                                telegram_link: formData.listingTelegramLink
+                                                               })
+                                                                .select()
+                                                                .single();
                                 
         if (error) {
             console.error("Error adding listing", error.message);
@@ -109,11 +116,13 @@ export const ListingForm = ({ onListingCreated }) => {
             listingName:"",
             listingImg: "",
             listingTags: [],
-            listingPrice: 0,
+            listingPrice: null,
             listingLink: "", 
             listingIsPreorder: false,
             listingDeposit: 0,
-            listingArrival: ""
+            listingArrival: "",
+            carousellPrice: null,
+            listingIsRestocking: false,
         });
         setTags([]);
 
@@ -176,6 +185,31 @@ export const ListingForm = ({ onListingCreated }) => {
         </>
     };
 
+    const RestockingCheckbox = () => {
+        return <>
+            <label className="flex items-center gap-2">
+                <span className="text-sm font-medium">Restocking item?</span>
+                <div className="relative">
+                    <input
+                    type="checkbox"
+                    checked={formData.listingIsRestocking}
+                    onChange={(e) =>
+                        setFormData((prev) => ({
+                        ...prev,
+                        listingIsRestocking: e.target.checked,
+                        }))
+                    }
+                    className="peer sr-only"
+                    />
+                    <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
+                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
+                </div>
+                
+
+            </label>
+        </>
+    };
+
 
 
     return (
@@ -194,9 +228,10 @@ export const ListingForm = ({ onListingCreated }) => {
                        }} />
 
                 <span className="text-secondary text-2xl md:text-3xl font-semibold">Price</span>
-                <input name="price" 
+                <div className="flex flex-row gap-2">
+                    <input name="price" 
                        type="number" 
-                       placeholder="0" 
+                       placeholder="Price on website" 
                        required
                        className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                        value={formData.listingPrice} 
@@ -204,6 +239,19 @@ export const ListingForm = ({ onListingCreated }) => {
                         setFormData((prev) => ({...prev, listingPrice: event.target.value }));
                        }} />
                 
+                    <input name="carousellPrice" 
+                        type="number" 
+                        placeholder="Price on Carousell" 
+                        required
+                        className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                        value={formData.carousellPrice} 
+                        onChange={(event) => {
+                            setFormData((prev) => ({...prev, carousellPrice: event.target.value }));
+                        }} />
+                </div>
+                
+
+                <RestockingCheckbox />
                 <PreorderCheckbox />
                 {formData.listingIsPreorder && <input
                                                 name="deposit"
