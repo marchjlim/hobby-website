@@ -17,6 +17,8 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         listingIsPreorder: listing.is_preorder,
         listingDeposit: listing.deposit,
         listingArrival: listing.arrival_date,
+        listingCarousellPrice: listing.carousell_price,
+        listingIsRestocking: listing.is_restocking,
     });
 
     const [allTags, setAllTags] = useState(formattedInitialListingTags);
@@ -63,7 +65,9 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                                                   link: formData.listingLink,
                                                   is_preorder: formData.listingIsPreorder,
                                                   deposit: formData.listingDeposit,
-                                                  arrival_date: formData.listingArrival })
+                                                  arrival_date: formData.listingArrival,
+                                                  is_restocking: formData.listingIsRestocking,
+                                                  carousell_price: formData.listingCarousellPrice})
                                         .eq("id", listing.id);
 
                                 
@@ -154,6 +158,31 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         </>
     };
 
+    const RestockingCheckbox = () => {
+        return <>
+            <label className="flex items-center gap-2">
+                <span className="text-sm font-medium">Restocking item?</span>
+                <div className="relative">
+                    <input
+                    type="checkbox"
+                    checked={formData.listingIsRestocking}
+                    onChange={(e) =>
+                        setFormData((prev) => ({
+                        ...prev,
+                        listingIsRestocking: e.target.checked,
+                        }))
+                    }
+                    className="peer sr-only"
+                    />
+                    <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
+                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
+                </div>
+                
+
+            </label>
+        </>
+    };
+
     
 
     return (
@@ -180,16 +209,35 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
 
-                <input name="price" 
-                       type="number" 
-                       placeholder="0" 
-                       required
-                       className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
-                       value={formData.listingPrice} 
-                       onChange={(event) => {
-                        setFormData((prev) => ({...prev, listingPrice: event.target.value }));
-                       }} />
-
+                <div className="flex flex-row gap-2">
+                    <div className="flex flex-col">
+                        <span className="text-center">Price</span>
+                        <input name="price" 
+                        type="number" 
+                        placeholder="0" 
+                        required
+                        className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                        value={formData.listingPrice} 
+                        onChange={(event) => {
+                            setFormData((prev) => ({...prev, listingPrice: event.target.value }));
+                        }} />
+                    </div>
+                    
+                    <div className="flex flex-col">
+                        <span className="text-center">Carousell Price</span>
+                        <input name="carousellPrice" 
+                        type="number" 
+                        placeholder="0" 
+                        required
+                        className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                        value={formData.listingCarousellPrice} 
+                        onChange={(event) => {
+                            setFormData((prev) => ({...prev, listingCarousellPrice: event.target.value }));
+                        }} />
+                    </div>
+                </div>
+                
+                <RestockingCheckbox />
                 <PreorderCheckbox />
                 {formData.listingIsPreorder && <input
                                                 name="deposit"

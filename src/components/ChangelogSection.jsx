@@ -19,6 +19,18 @@ export const ChangelogSection = () => {
     //   }
     // },
     {
+      version: "v1.1.0",
+      date: "12-08-2025",
+      changes: {
+        Added: [
+            "Telegram link for each listing",
+            "Price tag for Telegram vs Carousell",
+            "Restocking badge for listings that are restocking",
+        ],
+      },
+    },
+
+    {
       version: "v1.0.0",
       date: "19-06-2025",
       changes: {
