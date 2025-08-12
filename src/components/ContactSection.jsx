@@ -7,7 +7,8 @@ export const ContactSection = () => {
             </h2>
 
             <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-                Have any questions or want me to find a kit for you? Contact me.
+                Have any questions, want to purchase something or want me to find a kit for you? 
+                Contact me.
             </p>
 
             <div>
@@ -25,6 +26,28 @@ export const ContactSection = () => {
                                 <a href="https://www.carousell.sg/u/plasticmethenjoyer/" target="_blank"
                                     className="text-muted-foreground hover:text-primary transition-colors">
                                     Plasticmethenjoyer
+                                </a>
+                            </div>
+                            <div className="p-3 rounded-full bg-primary/10">
+                                <img src="icons/Telegram-icon.png"
+                                     className="h-6 w-6 rounded" />
+                            </div>
+                            <div>
+                                <h4 className="font-medium"> Telegram</h4>
+                                <a href="https://t.me/plasticmethenjoyer" target="_blank"
+                                    className="text-muted-foreground hover:text-primary transition-colors">
+                                    @Plasticmethenjoyer
+                                </a>
+                            </div>
+                            <div className="p-3 rounded-full bg-primary/10">
+                                <img src="icons/Telegram-icon.png"
+                                     className="h-6 w-6 rounded" />
+                            </div>
+                            <div>
+                                <h4 className="font-medium"> Telegram Channel</h4>
+                                <a href="https://t.me/plasticmethenjoyergroup" target="_blank"
+                                    className="text-muted-foreground hover:text-primary transition-colors">
+                                    @Plasticmethenjoyergroup
                                 </a>
                             </div>
                         </div>
