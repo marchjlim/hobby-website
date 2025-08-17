@@ -72,6 +72,9 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
                     Click on the tags to filter the listings.
                 </p>
                 <p>
+                    Meetups are available near Lorong Chuan MRT station.
+                </p>
+                <p>
                     Note: Deals made on Telegram are cheaper. See <a href="#faq" className="text-primary">FAQ</a> for more info.
                 </p>
             </div>
