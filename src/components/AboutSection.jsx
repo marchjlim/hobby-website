@@ -24,6 +24,9 @@ export const AboutSection = () => {
 
                     <p className="text-muted-foreground">
                         This website was made for fun during my spare time.
+                        <p>
+                            Enable dark mode to see the full effect of the design.
+                        </p>
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-4 pt-4 justify-center">

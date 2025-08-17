@@ -17,6 +17,16 @@ export const HeroSection = () => {
                     A fellow gunpla addict.
                 </p>
 
+                <p className="text-md md:text-lg text-muted-foreground max-2-2xl mx-auto opacity:0 animate-fade-in-delay-4">
+                    This is my personal website where I share my collection of Gundam kits and accessories.
+                    You'll be able to find cheaper prices here than on Carousell, but only if you initiate
+                    the deal on <a href="https://t.me/plasticmethenjoyer" target="_blank" rel="noopener noreferrer" className="text-primary underline">Telegram</a>.
+                    <p>
+                        As I've recently launched my <a href="https://t.me/plasticmethenjoyergroup" target="_blank" rel="noopener noreferrer" className="text-primary underline">Telegram channel</a>,
+                        I'll be having some special offers exclusively available there. Guaranteed best market price in Singapore.
+                    </p>
+                </p>
+
                 <div>
                     <a href="#listings" className="cosmic-button opacity-0 animate-fade-in-delay-4">
                         View Listings
