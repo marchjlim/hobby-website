@@ -6,8 +6,8 @@ export const ListingsContainer = ({ listingsToDisplay, tagMap, isModifiable, tri
                                     selectedListingIds }) => {
     return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {listingsToDisplay.map((listing, key) => 
-                    <ListingCard listing={listing} key={key} 
+                {listingsToDisplay.map((listing) => 
+                    <ListingCard listing={listing} key={listing.id} 
                                  tags={(tagMap[listing.id] || [])}
                                  isModifiable={isModifiable}
                                  triggerRefresh={triggerRefresh}

@@ -5,7 +5,7 @@ import { Check, CheckCircle, Clock } from "lucide-react";
 import { DeleteListingButton } from "./DeleteListingButton";
 
 
-export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
+export const ListingCard = ({ listing, tags = [], isModifiable, triggerRefresh,
                               isSelectable = false, onSelect, onUnselect, selectedListingIds }) => {
     const [isEditing, setIsEditing] = useState(false);
 
@@ -105,7 +105,7 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
 
 
 
-    return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
+    return <div className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
                                                 onListingEdited={async () => {
                                                     triggerRefresh();

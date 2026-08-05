@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { supabase } from "../../supabase-client";
 import { useLocation } from "react-router-dom";
 import { ListingsContainer } from "./ListingsContainer";
 
 
 export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
     const [activeTag, setActiveTag] = useState("all");
+    const [loadError, setLoadError] = useState("");
 
     const [listings, setListings] = useState([]);
     const [tagMap, setTagMap] = useState({});
@@ -16,38 +16,44 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
     const isAdminPage = location.pathname === "/secret-admin-page";
 
     const fetchAllTags = async () => {
-        const {error, data: tagData } = await supabase.from("ListingTag").select("name");
+        try {
+            const response = await fetch("/api/listings/tags");
 
-        if (error) {
-            console.error("Error fetching all tags: ", error.message);
-            return;
+            if (!response.ok) {
+                throw new Error(`Error while fetching all tags: ${response.status}`);
+            }
+            const payload = await response.json();
+            const tagsData = payload.results ?? [];
+            setTags(tagsData.map((row) => row.name));
+        } catch (error) {
+            console.error("Error fetching all tags:", error.message);
         }
-        setTags(tagData.map(row => row.name));
-    }
+    };
 
     const fetchListings = async () => {
-        const { error, data: dataListings } = await supabase.from("Listings").select("*").order("created_at", { ascending : true });
+        try {
+            const response = await fetch("/api/listings/withtags");
 
-        if (error) {
+            if (!response.ok) {
+                throw new Error(`Listings API returned ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const dataListings = payload.results ?? [];
+            const nextTagMap = {};
+
+            for (const listing of dataListings) {
+                nextTagMap[listing.id] = listing.tags ?? [];
+            }
+
+            setListings(dataListings);
+            setTagMap(nextTagMap);
+            setLoadError("");
+        } catch (error) {
             console.error("Error fetching listings", error.message);
-            return;
+            setLoadError("Unable to load listings right now.");
         }
-
-        setListings(dataListings);
-
-        // fetch tags
-        const tagMapTemp = {};
-        for (const listing of dataListings) {
-            const { error, data } = await supabase.from("Tagged").select("TagName").eq("ListingId", listing.id);
-            
-            if (error) {
-                console.error("Error fetching tags for listings: ", error.message);
-                continue;
-        }  
-        tagMapTemp[listing.id] = data.map(row => row.TagName);
-        }
-        setTagMap(tagMapTemp);
-    }
+    };
 
     useEffect(() => {
         fetchAllTags();
@@ -78,6 +84,10 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
                     Note: Deals made on Telegram are cheaper. See <a href="#faq" className="text-primary">FAQ</a> for more info.
                 </p>
             </div>
+
+            {loadError && (
+                <p className="mb-6 text-center text-sm text-red-500">{loadError}</p>
+            )}
             
             
 
