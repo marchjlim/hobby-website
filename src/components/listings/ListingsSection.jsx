@@ -23,14 +23,18 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
     const isAdminPage = location.pathname === "/secret-admin-page";
 
     const fetchAllTags = async () => {
-        const response = await fetch("/api/listings/tags");
+        try {
+            const response = await fetch("/api/listings/tags");
 
-        if (!response.ok) {
-            throw new Error(`Error while fetching all tags: ${response.status}`)
+            if (!response.ok) {
+                throw new Error(`Error while fetching all tags: ${response.status}`);
+            }
+            const payload = await response.json();
+            const tagsData = payload.results ?? [];
+            setTags(tagsData.map(tagRow => tagRow.name));
+        } catch (error) {
+            console.error("Error fetching tags", error.message);
         }
-        const payload = await response.json();
-        const tagsData = payload.results ?? [];
-        setTags(tagsData.map(tagRow => tagRow.name));
     }
 
     const fetchListings = async () => {

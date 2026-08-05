@@ -5,7 +5,7 @@ import { Check, CheckCircle, Clock } from "lucide-react";
 import { DeleteListingButton } from "./DeleteListingButton";
 
 
-export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
+export const ListingCard = ({ listing, tags, isModifiable, triggerRefresh,
                               isSelectable = false, onSelect, onUnselect, selectedListingIds }) => {
     const [isEditing, setIsEditing] = useState(false);
 
@@ -37,12 +37,13 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
         </button>
     );
 
-    const PriceTag = ({ price, currency = "SGD", className = "" }) => {
+    const PriceTag = ({ price, platform, currency = "SGD", className = "" }) => {
         return (
             <div
             className={`inline-flex items-center px-3 py-1 rounded-full bg-primary/80 text-white text-sm font-semibold shadow-sm ${className}`}
             >
-            {currency} ${price}
+            {platform ? `${platform}: ` : `${currency} `}
+            ${price}
             </div>
         );
     };
@@ -54,6 +55,17 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                title="View listing on Carousell"
                className="text-muted-foreground hover:text-primary transition-colors">
                     <img src="icons/Carousell-logo-square.png" className="h-6 w-6 rounded" />
+            </a>
+        );
+    }
+
+    const TelegramLink = ({ link }) => {
+        return (
+            <a href={link}
+               target="_blank"
+               title="Contact seller on Telegram"
+               className="text-muted-foreground hover:text-primary transition-colors">
+                    <img src="icons/Telegram-icon.png" className="h-6 w-6 rounded" />
             </a>
         );
     }
@@ -80,9 +92,18 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
         );
     };
 
+    const RestockingBadge = ({ className = "" }) => {
+        return (
+            <div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500 text-white text-sm font-semibold shadow-md ${className}`}
+            >
+            <Clock size={16} className="stroke-white" />
+            Restocking
+            </div>
+        );
+    };
 
-
-    return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
+    return <div className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
                                                 onListingEdited={async () => {
                                                     triggerRefresh();
@@ -112,12 +133,19 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                                         className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
                                      />
                                     <div className="flex w-full justify-between">
-                                        <PriceTag price={listing.price} />
+                                        <PriceTag price={listing.carousell_price} platform="Carousell" />
                                         <CarousellLink link={listing.link} />
-                                        
+                                    </div>
+
+                                    <div className="flex w-full justify-between">
+                                        <PriceTag price={listing.price} platform="Telegram" />
+                                        <TelegramLink link={listing.telegram_link} />
                                     </div>
                                     
-                                    {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} /> : <InStockBadge />}
+                                    {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} />
+                                                         : listing.is_restocking
+                                                         ? <RestockingBadge />
+                                                         : <InStockBadge />}
                                 </div>
                                 <div className="mt-4 flex flex-wrap">
                                     {/*specify empty array here for listings with no tags to appear.*/}
