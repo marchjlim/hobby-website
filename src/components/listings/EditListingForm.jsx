@@ -70,6 +70,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                                                   is_restocking: formData.listingIsRestocking,
                                                   carousell_price: formData.listingCarousellPrice,
                                                   telegram_link: formData.listingTelegramLink })
+                                                  carousell_price: formData.listingCarousellPrice})
                                         .eq("id", listing.id);
 
                                 
@@ -183,6 +184,31 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         </>
     };
 
+    const RestockingCheckbox = () => {
+        return <>
+            <label className="flex items-center gap-2">
+                <span className="text-sm font-medium">Restocking item?</span>
+                <div className="relative">
+                    <input
+                    type="checkbox"
+                    checked={formData.listingIsRestocking}
+                    onChange={(e) =>
+                        setFormData((prev) => ({
+                        ...prev,
+                        listingIsRestocking: e.target.checked,
+                        }))
+                    }
+                    className="peer sr-only"
+                    />
+                    <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
+                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
+                </div>
+                
+
+            </label>
+        </>
+    };
+
     
 
     return (
@@ -236,7 +262,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                         }} />
                     </div>
                 </div>
-
+                
                 <RestockingCheckbox />
                 <PreorderCheckbox />
                 {formData.listingIsPreorder && <input

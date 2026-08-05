@@ -5,7 +5,7 @@ import { Check, CheckCircle, Clock } from "lucide-react";
 import { DeleteListingButton } from "./DeleteListingButton";
 
 
-export const ListingCard = ({ listing, tags, isModifiable, triggerRefresh,
+export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                               isSelectable = false, onSelect, onUnselect, selectedListingIds }) => {
     const [isEditing, setIsEditing] = useState(false);
 
@@ -42,7 +42,7 @@ export const ListingCard = ({ listing, tags, isModifiable, triggerRefresh,
             <div
             className={`inline-flex items-center px-3 py-1 rounded-full bg-primary/80 text-white text-sm font-semibold shadow-sm ${className}`}
             >
-            {platform ? `${platform}: ` : `${currency} `}
+            {platform}: 
             ${price}
             </div>
         );
@@ -61,7 +61,7 @@ export const ListingCard = ({ listing, tags, isModifiable, triggerRefresh,
 
     const TelegramLink = ({ link }) => {
         return (
-            <a href={link}
+            <a href={link} 
                target="_blank"
                title="Contact seller on Telegram"
                className="text-muted-foreground hover:text-primary transition-colors">
@@ -103,7 +103,9 @@ export const ListingCard = ({ listing, tags, isModifiable, triggerRefresh,
         );
     };
 
-    return <div className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
+
+
+    return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
                                                 onListingEdited={async () => {
                                                     triggerRefresh();
@@ -134,17 +136,17 @@ export const ListingCard = ({ listing, tags, isModifiable, triggerRefresh,
                                      />
                                     <div className="flex w-full justify-between">
                                         <PriceTag price={listing.carousell_price} platform="Carousell" />
-                                        <CarousellLink link={listing.link} />
-                                    </div>
-
-                                    <div className="flex w-full justify-between">
-                                        <PriceTag price={listing.price} platform="Telegram" />
-                                        <TelegramLink link={listing.telegram_link} />
+                                        <CarousellLink link={listing.link} />    
                                     </div>
                                     
-                                    {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} />
+                                    <div className="flex w-full justify-between">
+                                        <PriceTag price={listing.price} platform="Telegram" />
+                                        <TelegramLink link={listing.telegram_link} />    
+                                    </div>
+                                    
+                                    {listing.is_preorder ? <PreorderBadge arrival={listing.arrival_date} deposit={listing.deposit} /> 
                                                          : listing.is_restocking
-                                                         ? <RestockingBadge />
+                                                         ? <RestockingBadge /> 
                                                          : <InStockBadge />}
                                 </div>
                                 <div className="mt-4 flex flex-wrap">
