@@ -123,7 +123,6 @@ export const ListingForm = ({ onListingCreated }) => {
             listingArrival: "",
             carousellPrice: null,
             listingIsRestocking: false,
-            listingTelegramLink: "https://t.me/plasticmethenjoyer",
         });
         setTags([]);
 
@@ -205,9 +204,12 @@ export const ListingForm = ({ onListingCreated }) => {
                     <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
                     <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
                 </div>
+                
+
             </label>
         </>
     };
+
 
 
     return (
@@ -236,17 +238,6 @@ export const ListingForm = ({ onListingCreated }) => {
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingPrice: event.target.value }));
                        }} />
-
-                    <input name="carousellPrice" 
-                        type="number" 
-                        placeholder="Price on Carousell" 
-                        required
-                        className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
-                        value={formData.carousellPrice} 
-                        onChange={(event) => {
-                            setFormData((prev) => ({...prev, carousellPrice: event.target.value }));
-                        }} />
-                </div>
                 
                     <input name="carousellPrice" 
                         type="number" 
@@ -302,17 +293,6 @@ export const ListingForm = ({ onListingCreated }) => {
                        value={formData.listingLink} 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingLink: event.target.value }));
-                       }} />
-
-                <span className="text-secondary text-2xl md:text-3xl font-semibold">Telegram contact link</span>
-                <input name="telegramLink"
-                       type="url"
-                       placeholder="https://t.me/..."
-                       required
-                       className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
-                       value={formData.listingTelegramLink}
-                       onChange={(event) => {
-                        setFormData((prev) => ({...prev, listingTelegramLink: event.target.value }));
                        }} />
 
                 <span className="text-secondary text-2xl md:text-3xl font-semibold">
