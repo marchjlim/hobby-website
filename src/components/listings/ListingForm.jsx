@@ -209,32 +209,6 @@ export const ListingForm = ({ onListingCreated }) => {
         </>
     };
 
-    const RestockingCheckbox = () => {
-        return <>
-            <label className="flex items-center gap-2">
-                <span className="text-sm font-medium">Restocking item?</span>
-                <div className="relative">
-                    <input
-                    type="checkbox"
-                    checked={formData.listingIsRestocking}
-                    onChange={(e) =>
-                        setFormData((prev) => ({
-                        ...prev,
-                        listingIsRestocking: e.target.checked,
-                        }))
-                    }
-                    className="peer sr-only"
-                    />
-                    <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
-                    <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
-                </div>
-                
-
-            </label>
-        </>
-    };
-
-
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col bg-card mx-auto px-100">
