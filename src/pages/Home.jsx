@@ -16,14 +16,24 @@ import { ChangelogSection } from "../components/ChangelogSection";
 export const Home = () => {
     const [session, setSession] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [apiMessage, setApiMessage] = useState("loading...");
 
     const fetchSession = async () => {
         const currentSession = await supabase.auth.getSession();
         setSession(currentSession.data.session);
     };
 
+    const fetchApiMessage = async () => {
+        const response = await fetch("/api/hello");
+        const data = await response.json();
+        console.log("data retrieved");
+        console.log(data);
+        setApiMessage(data.message);
+    }
+
     useEffect(() => {
         fetchSession();
+        fetchApiMessage();
 
         const { data: authListener } = supabase.auth.onAuthStateChange(
             (_event, session) => {
@@ -79,6 +89,7 @@ export const Home = () => {
         {/* Main Content */}
             <main>
                 <HeroSection />
+                <span>{apiMessage}</span>
                 <AboutSection />
                 <ListingsSection />
                 <ContactSection />
