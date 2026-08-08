@@ -19,6 +19,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         listingArrival: listing.arrival_date,
         listingCarousellPrice: listing.carousell_price,
         listingIsRestocking: listing.is_restocking,
+        listingTelegramLink: listing.telegram_link,
     });
 
     const [allTags, setAllTags] = useState(formattedInitialListingTags);
@@ -67,7 +68,8 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                                                   deposit: formData.listingDeposit,
                                                   arrival_date: formData.listingArrival,
                                                   is_restocking: formData.listingIsRestocking,
-                                                  carousell_price: formData.listingCarousellPrice})
+                                                  carousell_price: formData.listingCarousellPrice,
+                                                  telegram_link: formData.listingTelegramLink })
                                         .eq("id", listing.id);
 
                                 
@@ -177,11 +179,10 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                     <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-green-500 transition" />
                     <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform" />
                 </div>
-                
-
             </label>
         </>
     };
+
 
     
 
@@ -278,6 +279,16 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                        value={formData.listingLink} 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingLink: event.target.value }));
+                       }} />
+
+                <input name="telegramLink"
+                       type="url"
+                       placeholder="https://t.me/..."
+                       required
+                       className="w-full px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                       value={formData.listingTelegramLink}
+                       onChange={(event) => {
+                        setFormData((prev) => ({...prev, listingTelegramLink: event.target.value }));
                        }} />
 
                 

@@ -1,52 +1,60 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { supabase } from "../../supabase-client";
 import { useLocation } from "react-router-dom";
 import { ListingsContainer } from "./ListingsContainer";
 
 
+// const listings = [
+//     {name: "MG Rezel type C defenser a + b unit", categories: ["MG", "Regular release", "1/100", "in-stock"], url: "", image: "/listings/rezel_type_c.jpg"},
+//     {name: "MG Tallgeese III special coating", categories: ["MG", "Event-limited", "1/100", "in-stock", "special coating"], url: "", image: "/listings/mg_tallgeese_III_special_coating.png"},
+//     {name: "RG Banshee Final battle special coating", categories: ["RG", "Premium Bandai", "1/144", "in-stock", "special coating"], url: "", image: "/listings/rg_banshee_special_coating.jpg"},
+//     {name: "RG Unicorn Final battle special coating", categories: ["RG", "Gundam base limited", "1/144", "in-stock", "special coating"], url: "", image:"/listings/rg_unicorn_special_coating.jpg"},
+// ]
+
 export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
     const [activeTag, setActiveTag] = useState("all");
+    const [searchQuery, setSearchQuery] = useState("");
 
     const [listings, setListings] = useState([]);
-    const [tagMap, setTagMap] = useState({});
     const [tags, setTags] = useState([]);
+    const [loadError, setLoadError] = useState("");
 
     const location = useLocation();
     const isAdminPage = location.pathname === "/secret-admin-page";
 
     const fetchAllTags = async () => {
-        const {error, data: tagData } = await supabase.from("ListingTag").select("name");
+        try {
+            const response = await fetch("/api/listings/tags");
 
-        if (error) {
-            console.error("Error fetching all tags: ", error.message);
-            return;
+            if (!response.ok) {
+                throw new Error(`Error while fetching all tags: ${response.status}`);
+            }
+            const payload = await response.json();
+            const tagsData = payload.results ?? [];
+            setTags(tagsData.map(tagRow => tagRow.name));
+        } catch (error) {
+            console.error("Error fetching tags", error.message);
         }
-        setTags(tagData.map(row => row.name));
     }
 
     const fetchListings = async () => {
-        const { error, data: dataListings } = await supabase.from("Listings").select("*").order("created_at", { ascending : true });
+        try {
+            const response = await fetch("/api/listings/withtags");
 
-        if (error) {
+            if (!response.ok) {
+                throw new Error(`Listings API returned ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const dataListingsWithTags = payload.results ?? [];
+            setListings(dataListingsWithTags);
+            setLoadError("");
+
+        } catch (error) {
             console.error("Error fetching listings", error.message);
+            setLoadError("Unable to load listings right now.");
             return;
         }
-
-        setListings(dataListings);
-
-        // fetch tags
-        const tagMapTemp = {};
-        for (const listing of dataListings) {
-            const { error, data } = await supabase.from("Tagged").select("TagName").eq("ListingId", listing.id);
-            
-            if (error) {
-                console.error("Error fetching tags for listings: ", error.message);
-                continue;
-        }  
-        tagMapTemp[listing.id] = data.map(row => row.TagName);
-        }
-        setTagMap(tagMapTemp);
     }
 
     useEffect(() => {
@@ -54,7 +62,7 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
         fetchListings();
     }, [refreshFlag]);
 
-    const filteredListings = listings.filter((listing) => activeTag === "all" || (tagMap[listing.id] || []).includes(activeTag));
+    const filteredListings = listings.filter((listing) => activeTag === "all" || listing.tags.includes(activeTag));
     
 
     return <section id="listings" className="py-24 px-4 relative bg-secondary/30">
@@ -62,23 +70,29 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
             My <span className="text-primary"> Listings</span>
             </h2>
-            <div className="text-muted-foreground max-2-2xl mx-auto mb-12">
-                <p>
-                See a kit that you want but isn't here? Feel free to <a href="#contact" className="text-primary">contact me </a>
+            <p className="text-muted-foreground max-2-2xl mx-auto mb-12">
+                See a kit that you want but isn't here? Feel free to <a href="#contact">contact me </a>
                 and I will see if I can source it out for you.
-                </p>
-                <p>
-                    Browse through my collection of Gundam kits and accessories. 
-                    Click on the tags to filter the listings.
-                </p>
-                <p>
-                    Meetups are available near Lorong Chuan MRT station.
-                </p>
-                <p>
-                    Note: Deals made on Telegram are cheaper. See <a href="#faq" className="text-primary">FAQ</a> for more info.
+            </p>
+
+            {loadError && (
+                <p className="mb-6 text-center text-sm text-red-500">{loadError}</p>
+            )}
+
+            <div className="max-w-2xl mx-auto mb-8">
+                <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Try: in-stock RG kits under $100"
+                    className="w-full px-4 py-3 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2
+                    focus:ring-primary"
+                />
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                    Current query: {searchQuery || "No search entered"}
                 </p>
             </div>
-            
             
 
             <div className="flex flex-wrap justify-center gap-4 mb-12">
@@ -96,8 +110,7 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
                 ))}
             </div>
 
-            <ListingsContainer listingsToDisplay={filteredListings} 
-                               tagMap={tagMap} 
+            <ListingsContainer listingsToDisplay={filteredListings}
                                isModifiable={isAdminPage}
                                triggerRefresh={triggerRefresh}
             />
