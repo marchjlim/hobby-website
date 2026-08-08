@@ -1,5 +1,10 @@
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from supabase import Client
+
+from auth import get_authenticated_supabase_client
+from models.tag import Tag
+from models.relationships import AttachTagToListingsRequest, ListingTag
 
 from database import supabase
 
@@ -85,4 +90,80 @@ def get_all_listings_with_tags():
         raise HTTPException(
             status_code = 503,
             detail = "Unable to reach Supabase while fetching all listings with tags"
+        ) from exc
+
+@router.post("/tag")
+def upsert_tag(
+    tag: Tag,
+    # Reject missing or invalid JWTs before the write operation runs.
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        tag_data = tag.model_dump() # supabase expects dict representation of database row
+        response = (
+            authenticated_supabase.table("ListingTag")
+                    .upsert(tag_data)
+                    .execute()
+        )
+        return {
+            "results": response.data
+        }
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+                status_code = 503,
+                detail = f"Unable to reach Supabase while upserting tag: {tag}"
+            ) from exc
+
+@router.post("/{listing_id}/tag")
+def add_tag_to_listing(
+    listing_id: int,
+    tag: Tag,
+    # Reject missing or invalid JWTs before the write operation runs.
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        tag_name = tag.name
+        listing_tag = ListingTag(listing_id = listing_id, tag_name = tag_name)
+        listing_tag_data = listing_tag.model_dump(by_alias = True)
+        response = (
+            authenticated_supabase.table("Tagged")
+                    .upsert(listing_tag_data)
+                    .execute()
+        )
+        return {
+            "results": response.data
+        }
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+                status_code = 503,
+                detail = f"Unable to reach Supabase while upserting listing tag relationship: {listing_tag}"
+            ) from exc
+
+@router.post("/tags/attach")
+def attach_tag_to_listings(
+    request: AttachTagToListingsRequest,
+    # Reuse one authenticated client for this request's database work.
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    deduped_listing_ids = set(request.listing_ids)
+    relationships = [
+        ListingTag(listing_id=listing_id, tag_name=request.tag_name)
+        .model_dump(by_alias=True)
+        for listing_id in deduped_listing_ids
+    ]
+
+    try:
+        response = (
+            authenticated_supabase.table("Tagged")
+            .upsert(relationships)
+            .execute()
+        )
+        return {"results": response.data}
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Unable to reach Supabase while attaching tag "
+                f"{request.tag_name} to listings"
+            ),
         ) from exc
