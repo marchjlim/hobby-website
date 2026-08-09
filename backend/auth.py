@@ -1,0 +1,48 @@
+from typing import Annotated
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from supabase_auth.errors import AuthApiError
+from supabase import Client
+
+from database import create_authenticated_client, supabase
+
+
+# HTTPBearer is a FastAPI security dependency. It knows how to read an http header formatted asd
+# Authorization: Bearer <token>. It doesn't validate anything, only parses
+# Eg Authorization: Bearer abc123 ->
+# HTTPAuthorizationCredentials(scheme = "Bearer", credentials = "abc123")
+bearer_scheme = HTTPBearer(auto_error=False)
+
+# FastAPI Dependency injection: examines function params marked with Depends(...)
+# then runs those dependencies before the endpoint and passing their return values into the params
+def get_authenticated_supabase_client(
+    # 'credentials' has the type HTTPAuthorizationCredentials | None, and FastAPI should obtain it using bearer_scheme.
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
+) -> Client:
+    """Validate the caller's JWT and return a user-scoped Supabase client."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = credentials.credentials
+
+    try:
+        # Validate with Supabase Auth instead of trusting an unverified token.
+        supabase.auth.get_user(access_token)
+    except AuthApiError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    # Attach the validated token only to this request's database client so
+    # PostgreSQL can enforce the signed-in user's RLS permissions.
+    return create_authenticated_client(access_token)

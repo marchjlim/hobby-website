@@ -1,4 +1,4 @@
-﻿import os
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -25,3 +25,13 @@ if not supabase_url or not supabase_anon_key:
 
 supabase: Client = create_client(supabase_url, supabase_anon_key)
 print("Successfully initiated supabase client")
+
+
+def create_authenticated_client(access_token: str) -> Client:
+    # Authentication headers are mutable, so create a separate client for each
+    # HTTP request instead of placing a user's token on the shared public client.
+    client = create_client(supabase_url, supabase_anon_key)
+    # PostgREST forwards this JWT to PostgreSQL, where Supabase RLS evaluates
+    # the request as the signed-in user rather than as the anon role.
+    client.postgrest.auth(access_token)
+    return client
