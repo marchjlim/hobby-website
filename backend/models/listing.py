@@ -31,6 +31,7 @@ class ListingCreationRequest(BaseModel):
     is_restocking: bool = False
     carousell_price: float | None = Field(default=None, ge=0)
     telegram_link: str | None = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class ListingUpdateRequest(BaseModel):
@@ -44,3 +45,4 @@ class ListingUpdateRequest(BaseModel):
     is_restocking: bool | None = None
     carousell_price: float | None = Field(default=None, ge=0)
     telegram_link: str | None = None
+    tags: list[str] | None = None

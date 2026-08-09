@@ -11,6 +11,7 @@ import { AuthForm } from "../components/AuthForm";
 import { useEffect, useState } from 'react';
 import { supabase } from "../supabase-client";
 import { ChangelogSection } from "../components/ChangelogSection";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 
 export const Home = () => {
@@ -50,22 +51,19 @@ export const Home = () => {
         console.log("Session updated:", session);
         const user = session?.user;
 
-        const fetchAdminStatus = async (userUUID) => {
-            const { data, error } = await supabase.from("Users")
-                                                    .select("is_admin")
-                                                    .eq("auth_user_id", userUUID)
-                                                    .single();
-            if (error) {
-                console.log("Error fetching admin status for user:", error.message);
+        const fetchAdminStatus = async () => {
+            const response = await authenticatedFetch("/api/users/me");
+            if (!response.ok) {
+                console.log("Error fetching admin status:", response.status);
                 return;
             }
-
-            return data.is_admin;
+            const payload = await response.json();
+            return payload.user?.is_admin ?? false;
         }
 
         const checkAdmin = async () => {
             if (user) {
-                const adminStatus = await fetchAdminStatus(user.id);
+                const adminStatus = await fetchAdminStatus();
                 setIsAdmin(adminStatus);
             } else {
                 setIsAdmin(false);

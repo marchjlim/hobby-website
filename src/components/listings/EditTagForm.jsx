@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { supabase } from "../../supabase-client";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { Pencil, X } from "lucide-react";
 
 export const EditTagForm = ({ tagName, onTagEdited, onCancel }) => {
@@ -10,12 +10,16 @@ export const EditTagForm = ({ tagName, onTagEdited, onCancel }) => {
     const handleUpdate = async (event) => {
         event.preventDefault();
         
-        const { error } = await supabase.from("ListingTag")
-                                        .update({ name: formData.tagName })
-                                        .eq("name", tagName);
-         
-        if (error) {
-            console.error("Error updating tag name", error.message);
+        const response = await authenticatedFetch(
+            `/api/listings/tags/${encodeURIComponent(tagName)}`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: formData.tagName }),
+            },
+        );
+        if (!response.ok) {
+            console.error("Error updating tag name", response.status);
             return;
         }
 

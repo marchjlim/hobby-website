@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { supabase } from "../../supabase-client";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
 import { Trash } from 'lucide-react';
@@ -25,12 +25,13 @@ export const ListingForm = ({ onListingCreated }) => {
     const { toast } = useToast();
 
     const fetchAllTags = async () => {
-        const {error, data: tagData } = await supabase.from("ListingTag").select("name");
-
-        if (error) {
-            console.error("Error fetching all tags: ", error.message);
+        const response = await fetch("/api/listings/tags");
+        if (!response.ok) {
+            console.error("Error fetching all tags: ", response.status);
             return;
         }
+        const payload = await response.json();
+        const tagData = payload.results ?? [];
         setAllTags(tagData.map(row => ({ id: row.name, text: row.name })));
     }
 
@@ -50,64 +51,32 @@ export const ListingForm = ({ onListingCreated }) => {
         }
     };
 
-    const uploadImage = async (file) => {
-        const filePath = `${file.name}-${Date.now()}`; 
-        const {error} = await supabase.storage.from("listing-images").upload(filePath, file);
-
-        if (error) {
-            console.error("Error uploading image: ", error.message);
-            return null;
-        }
-
-        const {data} = await supabase.storage.from("listing-images").getPublicUrl(filePath);
-
-        return data.publicUrl;
-    }
-
     const handleSubmit = async (event) => {
         event.preventDefault();
-
-        let imageUrl = null;
-
+        const requestBody = new FormData();
+        requestBody.append("payload", JSON.stringify({
+            name: formData.listingName,
+            price: Number(formData.listingPrice),
+            link: formData.listingLink,
+            is_preorder: formData.listingIsPreorder,
+            deposit: formData.listingDeposit === null ? null : Number(formData.listingDeposit),
+            arrival_date: formData.listingArrival,
+            is_restocking: formData.listingIsRestocking,
+            carousell_price: formData.carousellPrice === null ? null : Number(formData.carousellPrice),
+            telegram_link: formData.listingTelegramLink,
+            tags: tags.map(tag => tag.text),
+        }));
         if (listingImage) {
-            imageUrl = await uploadImage(listingImage);
-        }
-        
-        // insert into listings
-        const { error, data } = await supabase.from("Listings").insert(
-                                                               {name: formData.listingName, 
-                                                                image_url: imageUrl,
-                                                                price: formData.listingPrice,
-                                                                link: formData.listingLink,
-                                                                is_preorder: formData.listingIsPreorder,
-                                                                deposit: formData.listingDeposit,
-                                                                arrival_date: formData.listingArrival,
-                                                                is_restocking: formData.listingIsRestocking,
-                                                                carousell_price: formData.carousellPrice,
-                                                                telegram_link: formData.listingTelegramLink
-                                                               })
-                                                                .select()
-                                                                .single();
-                                
-        if (error) {
-            console.error("Error adding listing", error.message);
-            return;
+            requestBody.append("image", listingImage);
         }
 
-        for (const tag of tags) {
-            const {error: tagError} = await supabase.from("ListingTag").upsert({ name: tag.text },
-                                                             { onConflict: ['name'] }
-                                                            )
-            if (tagError) {
-                console.error("Error adding listing tags", tagError.message);
-                return;
-            }
-            
-            const {error: relationError} = await supabase.from("Tagged").insert({ TagName: tag.text, ListingId: data.id });
-            if (relationError) {
-                console.error("Error adding listing and tag relation", relationError.message);
-                return;
-            }
+        const response = await authenticatedFetch("/api/listings", {
+            method: "POST",
+            body: requestBody,
+        });
+        if (!response.ok) {
+            console.error("Error adding listing", response.status);
+            return;
         }
 
 
@@ -125,6 +94,7 @@ export const ListingForm = ({ onListingCreated }) => {
             listingIsRestocking: false,
         });
         setTags([]);
+        setListingImage(null);
 
         await fetchAllTags();
         await onListingCreated();

@@ -1,9 +1,16 @@
+import json
+import mimetypes
+from pathlib import Path
+from uuid import uuid4
+
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import ValidationError
 from supabase import Client
 
 from auth import get_authenticated_supabase_client
-from models.tag import Tag
+from models.listing import ListingCreationRequest, ListingUpdateRequest
+from models.tag import Tag, TagRenameRequest
 from models.relationships import AttachTagToListingsRequest, ListingTag
 
 from database import supabase
@@ -14,6 +21,59 @@ from database import supabase
 # tags param: for documentation. FastAPI automatically generates Swagger docs at /docs, the tags controls
 # how endpoints are grouped in those docs
 router = APIRouter(prefix="/api/listings", tags=["listings"])
+
+
+async def upload_listing_image(
+    image: UploadFile,
+    authenticated_supabase: Client,
+) -> str:
+    suffix = Path(image.filename or "").suffix
+    file_path = f"{uuid4().hex}{suffix}"
+    content = await image.read()
+    content_type = image.content_type or mimetypes.guess_type(file_path)[0]
+    options = {"content-type": content_type} if content_type else None
+    authenticated_supabase.storage.from_("listing-images").upload(
+        file_path,
+        content,
+        options,
+    )
+    return authenticated_supabase.storage.from_("listing-images").get_public_url(
+        file_path
+    )
+
+
+def sync_listing_tags(
+    authenticated_supabase: Client,
+    listing_id: int,
+    tags: list[str],
+) -> None:
+    for tag_name in tags:
+        authenticated_supabase.table("ListingTag").upsert(
+            {"name": tag_name},
+            on_conflict="name",
+        ).execute()
+        authenticated_supabase.table("Tagged").upsert({
+            "TagName": tag_name,
+            "ListingId": listing_id,
+        }).execute()
+
+    current_response = (
+        authenticated_supabase.table("Tagged")
+        .select("TagName")
+        .eq("ListingId", listing_id)
+        .execute()
+    )
+    desired_lowercase = [tag_name.lower() for tag_name in tags]
+    for relationship in current_response.data:
+        current_tag = relationship["TagName"]
+        if current_tag.lower() not in desired_lowercase:
+            (
+                authenticated_supabase.table("Tagged")
+                .delete()
+                .eq("ListingId", listing_id)
+                .eq("TagName", current_tag)
+                .execute()
+            )
 
 @router.get("/tags")
 def get_all_tags():
@@ -92,6 +152,144 @@ def get_all_listings_with_tags():
             detail = "Unable to reach Supabase while fetching all listings with tags"
         ) from exc
 
+
+@router.post("")
+async def create_listing(
+    payload: str = Form(),
+    image: UploadFile | None = File(default=None),
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        request = ListingCreationRequest.model_validate_json(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=json.loads(exc.json())) from exc
+
+    try:
+        image_url = request.image_url
+        if image:
+            image_url = await upload_listing_image(image, authenticated_supabase)
+
+        listing_data = request.model_dump(exclude={"tags"})
+        listing_data["image_url"] = image_url
+        response = (
+            authenticated_supabase.table("Listings")
+            .insert(listing_data)
+            .execute()
+        )
+        if not response.data:
+            raise HTTPException(status_code=502, detail="Supabase did not return the listing")
+        listing = response.data[0]
+        sync_listing_tags(authenticated_supabase, listing["id"], request.tags)
+        return {"result": listing}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to create listing") from exc
+
+
+@router.patch("/tags/{tag_name}")
+def rename_tag(
+    tag_name: str,
+    request: TagRenameRequest,
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        response = (
+            authenticated_supabase.table("ListingTag")
+            .update({"name": request.name})
+            .eq("name", tag_name)
+            .execute()
+        )
+        return {"results": response.data}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to rename tag") from exc
+
+
+@router.get("/tags/{tag_name}/usage")
+def get_tag_usage(tag_name: str):
+    try:
+        response = (
+            supabase.table("Tagged")
+            .select("*", count="exact", head=True)
+            .eq("TagName", tag_name)
+            .execute()
+        )
+        return {"count": response.count or 0}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to count tag usage") from exc
+
+
+@router.delete("/tags/{tag_name}")
+def delete_tag(
+    tag_name: str,
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        (
+            authenticated_supabase.table("Tagged")
+            .delete()
+            .ilike("TagName", tag_name)
+            .execute()
+        )
+        response = (
+            authenticated_supabase.table("ListingTag")
+            .delete()
+            .ilike("name", tag_name)
+            .execute()
+        )
+        return {"results": response.data}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to delete tag") from exc
+
+
+@router.patch("/{listing_id}")
+async def update_listing(
+    listing_id: int,
+    payload: str = Form(),
+    image: UploadFile | None = File(default=None),
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        request = ListingUpdateRequest.model_validate_json(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=json.loads(exc.json())) from exc
+
+    try:
+        listing_data = request.model_dump(exclude_unset=True, exclude={"tags"})
+        if image:
+            listing_data["image_url"] = await upload_listing_image(
+                image,
+                authenticated_supabase,
+            )
+        response = (
+            authenticated_supabase.table("Listings")
+            .update(listing_data)
+            .eq("id", listing_id)
+            .execute()
+        )
+        if request.tags is not None:
+            sync_listing_tags(authenticated_supabase, listing_id, request.tags)
+        return {"result": response.data[0] if response.data else None}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to update listing") from exc
+
+
+@router.delete("/{listing_id}")
+def delete_listing(
+    listing_id: int,
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    try:
+        response = (
+            authenticated_supabase.table("Listings")
+            .delete()
+            .eq("id", listing_id)
+            .execute()
+        )
+        return {"results": response.data}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Unable to delete listing") from exc
+
 @router.post("/tag")
 def upsert_tag(
     tag: Tag,
@@ -113,6 +311,35 @@ def upsert_tag(
                 status_code = 503,
                 detail = f"Unable to reach Supabase while upserting tag: {tag}"
             ) from exc
+
+
+@router.post("/tags/attach")
+def attach_tag_to_listings(
+    request: AttachTagToListingsRequest,
+    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
+):
+    relationships = [
+        ListingTag(listing_id=listing_id, tag_name=request.tag_name)
+        .model_dump(by_alias=True)
+        for listing_id in request.listing_ids
+    ]
+
+    try:
+        response = (
+            authenticated_supabase.table("Tagged")
+            .upsert(relationships)
+            .execute()
+        )
+        return {"results": response.data}
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Unable to reach Supabase while attaching tag "
+                f"{request.tag_name} to listings"
+            ),
+        ) from exc
+
 
 @router.post("/{listing_id}/tag")
 def add_tag_to_listing(
@@ -138,32 +365,3 @@ def add_tag_to_listing(
                 status_code = 503,
                 detail = f"Unable to reach Supabase while upserting listing tag relationship: {listing_tag}"
             ) from exc
-
-@router.post("/tags/attach")
-def attach_tag_to_listings(
-    request: AttachTagToListingsRequest,
-    # Reuse one authenticated client for this request's database work.
-    authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
-):
-    deduped_listing_ids = set(request.listing_ids)
-    relationships = [
-        ListingTag(listing_id=listing_id, tag_name=request.tag_name)
-        .model_dump(by_alias=True)
-        for listing_id in deduped_listing_ids
-    ]
-
-    try:
-        response = (
-            authenticated_supabase.table("Tagged")
-            .upsert(relationships)
-            .execute()
-        )
-        return {"results": response.data}
-    except httpx.HTTPError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Unable to reach Supabase while attaching tag "
-                f"{request.tag_name} to listings"
-            ),
-        ) from exc

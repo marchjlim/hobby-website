@@ -1,30 +1,31 @@
 import { Trash } from "lucide-react"
-import { supabase } from "../../supabase-client"
+import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 
 export const DeleteTagButton = ({ tagName, onDeleted }) => {
     const deleteTag = async () => {
 
-        const { count } = await supabase
-                                .from("Tagged")
-                                .select("*", { count: "exact", head: true })
-                                .eq("TagName", tagName);
+        const usageResponse = await fetch(
+            `/api/listings/tags/${encodeURIComponent(tagName)}/usage`,
+        );
+        if (!usageResponse.ok) {
+            console.error("Error fetching tag usage:", usageResponse.status);
+            return;
+        }
+        const { count } = await usageResponse.json();
 
         if (count > 0) {
             if (!window.confirm(`This tag is used in ${count} listing(s). Delete anyway?`)) {
                 return;
             }
-            // delete relations
-            const { error } = await supabase.from("Tagged").delete().ilike("TagName", tagName);
-            if (error) {
-                console.log("Error deleting tag relation:", error.message);
-                return;
-            }
         }
 
-        const { error } = await supabase.from("ListingTag").delete().ilike("name", tagName);
-        if (error) {
-            console.error("Error deleting tag:", error.message);
+        const response = await authenticatedFetch(
+            `/api/listings/tags/${encodeURIComponent(tagName)}`,
+            { method: "DELETE" },
+        );
+        if (!response.ok) {
+            console.error("Error deleting tag:", response.status);
             return;
         }
         if (onDeleted) {

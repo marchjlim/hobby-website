@@ -9,6 +9,7 @@ import { supabase } from "../supabase-client";
 import { useNavigate } from "react-router-dom";
 import { TagManagementSection } from "../components/listings/TagManagementSection";
 import { TagForm } from "../components/listings/TagForm";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 export const Admin = () => {
     const [refreshFlag, setRefreshFlag] = useState(false);
@@ -42,20 +43,17 @@ export const Admin = () => {
         const user = session?.user;
 
         if (user) {
-            const fetchAdminStatus = async (userUUID) => {
-                const { data, error } = await supabase.from("Users")
-                                                        .select("is_admin")
-                                                        .eq("auth_user_id", userUUID)
-                                                        .single();
-                if (error) {
-                    console.log("Error fetching admin status for user:", error.message);
+            const fetchAdminStatus = async () => {
+                const response = await authenticatedFetch("/api/users/me");
+                if (!response.ok) {
+                    console.log("Error fetching admin status:", response.status);
                     return;
                 }
-
-                return data.is_admin;
+                const payload = await response.json();
+                return payload.user?.is_admin ?? false;
             }
             
-            fetchAdminStatus(user.id).then((adminStatus) => {
+            fetchAdminStatus().then((adminStatus) => {
                 setIsAdmin(adminStatus);
             });
         } else {
