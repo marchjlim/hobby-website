@@ -9,11 +9,15 @@ export const LogoutButton = () => {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast({ title: "Logout failed", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Logged out", description: "You have been signed out." });
-      navigate("/");
+      // An expired/revoked server session should not trap the user in the UI.
+      const { error: localError } = await supabase.auth.signOut({ scope: "local" });
+      if (localError) {
+        toast({ title: "Logout failed", description: error.message, variant: "destructive" });
+        return;
+      }
     }
+    toast({ title: "Logged out", description: "You have been signed out." });
+    navigate("/");
   };
 
   return (
