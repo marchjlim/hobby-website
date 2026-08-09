@@ -28,15 +28,20 @@ async def upload_listing_image(
     authenticated_supabase: Client,
 ) -> str:
     suffix = Path(image.filename or "").suffix
-    file_path = f"{uuid4().hex}{suffix}"
+    prefix = uuid4().hex # generate unique prefix
+    file_path = f"{prefix}{suffix}"
     content = await image.read()
     content_type = image.content_type or mimetypes.guess_type(file_path)[0]
     options = {"content-type": content_type} if content_type else None
+
+    # upload to supabase
     authenticated_supabase.storage.from_("listing-images").upload(
         file_path,
         content,
         options,
     )
+
+    # return public url from supabase
     return authenticated_supabase.storage.from_("listing-images").get_public_url(
         file_path
     )
@@ -169,8 +174,8 @@ async def create_listing(
         if image:
             image_url = await upload_listing_image(image, authenticated_supabase)
 
-        listing_data = request.model_dump(exclude={"tags"})
-        listing_data["image_url"] = image_url
+        listing = request.to_listing(image_url=image_url)
+        listing_data = listing.to_dict(exclude_none=True)
         response = (
             authenticated_supabase.table("Listings")
             .insert(listing_data)
@@ -178,9 +183,9 @@ async def create_listing(
         )
         if not response.data:
             raise HTTPException(status_code=502, detail="Supabase did not return the listing")
-        listing = response.data[0]
-        sync_listing_tags(authenticated_supabase, listing["id"], request.tags)
-        return {"result": listing}
+        created_listing = response.data[0]
+        sync_listing_tags(authenticated_supabase, created_listing["id"], request.tags)
+        return {"result": created_listing}
     except HTTPException:
         raise
     except Exception as exc:
@@ -255,12 +260,17 @@ async def update_listing(
         raise HTTPException(status_code=422, detail=json.loads(exc.json())) from exc
 
     try:
-        listing_data = request.model_dump(exclude_unset=True, exclude={"tags"})
+        listing_update = request.to_listing_update()
         if image:
-            listing_data["image_url"] = await upload_listing_image(
-                image,
-                authenticated_supabase,
+            listing_update = listing_update.model_copy(
+                update={
+                    "image_url": await upload_listing_image(
+                        image,
+                        authenticated_supabase,
+                    )
+                }
             )
+        listing_data = listing_update.to_dict(exclude_unset=True)
         response = (
             authenticated_supabase.table("Listings")
             .update(listing_data)
