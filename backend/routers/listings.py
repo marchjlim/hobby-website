@@ -52,6 +52,7 @@ def sync_listing_tags(
     listing_id: int,
     tags: list[str],
 ) -> None:
+    # insert tags and relationships
     for tag_name in tags:
         authenticated_supabase.table("ListingTag").upsert(
             {"name": tag_name},
@@ -68,10 +69,11 @@ def sync_listing_tags(
         .eq("ListingId", listing_id)
         .execute()
     )
-    desired_lowercase = [tag_name.lower() for tag_name in tags]
+    desired_lowercase_tags = set([tag_name.lower() for tag_name in tags])
     for relationship in current_response.data:
         current_tag = relationship["TagName"]
-        if current_tag.lower() not in desired_lowercase:
+        # remove stale relationships
+        if current_tag.lower() not in desired_lowercase_tags:
             (
                 authenticated_supabase.table("Tagged")
                 .delete()
@@ -296,6 +298,7 @@ def delete_listing(
             .eq("id", listing_id)
             .execute()
         )
+        # Supabase "Tagged" table has on delete cascade, so no need to send a req to supabase client
         return {"results": response.data}
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Unable to delete listing") from exc
