@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { supabase } from "../../supabase-client";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { WithContext as ReactTagInput } from 'react-tag-input';
 import { useToast } from "@/hooks/use-toast";
 import { Trash, X } from 'lucide-react';
@@ -34,79 +34,33 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         }
     };
 
-    const uploadImage = async (file) => {
-        const filePath = `${file.name}-${Date.now()}`; 
-        const {error} = await supabase.storage.from("listing-images").upload(filePath, file);
-
-        if (error) {
-            console.error("Error uploading image: ", error.message);
-            return null;
-        }
-
-        const {data} = await supabase.storage.from("listing-images").getPublicUrl(filePath);
-
-        return data.publicUrl;
-    }
-
     const handleUpdate = async (event) => {
         event.preventDefault();
-
-        let updatedImageUrl = null;
-
+        const requestBody = new FormData();
+        requestBody.append("payload", JSON.stringify({
+            name: formData.listingName,
+            image_url: formData.listingImg,
+            price: Number(formData.listingPrice),
+            link: formData.listingLink,
+            is_preorder: formData.listingIsPreorder,
+            deposit: formData.listingDeposit === null ? null : Number(formData.listingDeposit),
+            arrival_date: formData.listingArrival,
+            is_restocking: formData.listingIsRestocking,
+            carousell_price: formData.listingCarousellPrice === null ? null : Number(formData.listingCarousellPrice),
+            telegram_link: formData.listingTelegramLink,
+            tags: allTags.map(tag => tag.text),
+        }));
         if (updatedListingImage) {
-            updatedImageUrl = await uploadImage(updatedListingImage);
+            requestBody.append("image", updatedListingImage);
         }
-        
-        // update listing table
-        const { error } = await supabase.from("Listings")
-                                        .update({ name: formData.listingName, 
-                                                  image_url: updatedImageUrl ? updatedImageUrl
-                                                                             : formData.listingImg,
-                                                  price: formData.listingPrice,
-                                                  link: formData.listingLink,
-                                                  is_preorder: formData.listingIsPreorder,
-                                                  deposit: formData.listingDeposit,
-                                                  arrival_date: formData.listingArrival,
-                                                  is_restocking: formData.listingIsRestocking,
-                                                  carousell_price: formData.listingCarousellPrice,
-                                                  telegram_link: formData.listingTelegramLink })
-                                        .eq("id", listing.id);
 
-                                
-        if (error) {
-            console.error("Error updating listing", error.message);
+        const response = await authenticatedFetch(`/api/listings/${listing.id}`, {
+            method: "PATCH",
+            body: requestBody,
+        });
+        if (!response.ok) {
+            console.error("Error updating listing", response.status);
             return;
-        }
-
-        for (const tag of allTags) {
-            // insert new listing tag, if any
-            const {error: tagError} = await supabase.from("ListingTag").upsert({ name: tag.text },
-                                                             { onConflict: ['name'] }
-                                                            )
-            if (tagError) {
-                console.error("Error adding listing tags", tagError.message);
-                return;
-            }
-            
-            const {error: relationError} = await supabase.from("Tagged").upsert({ TagName: tag.text, ListingId: listing.id });
-            if (relationError) {
-                console.error("Error adding listing and tag relation", relationError.message);
-                return;
-            }
-        }
-
-        // delete relations for tags that have been removed
-        let lowerCaseTags = allTags.map(tag => tag.text.toLowerCase());
-        // removed tags are ones that contained in initialListingTags but not in allTags
-        let removedTags = initialListingTags.filter(tag => !lowerCaseTags.includes(tag.toLowerCase()));
-        for (const removedTag of removedTags) {
-            const {error: removeRelationError} = await supabase.from("Tagged").delete()
-                                                                              .eq("ListingId", listing.id)
-                                                                              .eq("TagName", removedTag);
-            
-            if (removeRelationError) {
-                console.error("Error removing listing and tag relation", removeRelationError.message);
-            }
         }
 
         onListingEdited();

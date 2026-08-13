@@ -19,7 +19,12 @@ const adminNavItems = [
 
 const navHeight = 10;
 
-export const Navbar = ({ isSignedIn, isAdmin }) => {
+export const Navbar = ({
+    isSignedIn,
+    isAdmin,
+    isSessionLoaded = true,
+    isCheckingAdmin = false,
+}) => {
     console.log("isSignedIn prop:", isSignedIn);
     console.log("isAdmin prop:", isAdmin);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -85,10 +90,15 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
                             </a>
                         ))}
                         
-                            {isSignedIn ? <LogoutButton />
-                                        : <a href={"#login"} className="cosmic-button">Log In</a>
+                            {(!isSessionLoaded || isSignedIn && isCheckingAdmin)
+                                ? <div className="h-10 w-24 rounded-full bg-muted animate-pulse" aria-hidden="true" />
+                                : isSignedIn ? <LogoutButton />
+                                             : <a href={"#login"} className="cosmic-button">Log In</a>
                             }
-                            {isAdmin && (isOnAdminPage ? <HomeButton /> : <AdminButton />)}
+                            {(!isSessionLoaded || isSignedIn && isCheckingAdmin)
+                                ? <div className="h-10 w-28 rounded-full bg-muted animate-pulse" aria-hidden="true" />
+                                : isAdmin && (isOnAdminPage ? <HomeButton /> : <AdminButton />)
+                            }
                     </div>
 
                     {/* mobile nav */}
@@ -118,10 +128,15 @@ export const Navbar = ({ isSignedIn, isAdmin }) => {
                                     {item.name}
                                 </a>
                             ))}
-                            {isSignedIn ? <LogoutButton />
-                                        : <a href={"#login"} className="cosmic-button">Log In</a>
+                            {!isSessionLoaded
+                                ? <div className="h-10 w-24 self-center rounded-full bg-muted animate-pulse" aria-hidden="true" />
+                                : isSignedIn ? <LogoutButton />
+                                             : <a href={"#login"} className="cosmic-button">Log In</a>
                             }
-                            {isAdmin && (isOnAdminPage ? <HomeButton /> : <AdminButton />)}
+                            {isSignedIn && isCheckingAdmin
+                                ? <div className="h-10 w-28 self-center rounded-full bg-muted animate-pulse" aria-hidden="true" />
+                                : isAdmin && (isOnAdminPage ? <HomeButton /> : <AdminButton />)
+                            }
                         </div>
                     </div>
                 </div>

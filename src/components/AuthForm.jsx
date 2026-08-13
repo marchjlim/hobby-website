@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../supabase-client"; 
 import { useToast } from "@/hooks/use-toast"; 
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -18,16 +19,20 @@ export const AuthForm = () => {
         let authData = null;
 
         if (isSignUp) {
-          const { error: queryError, data: queryData } = await supabase.from("Users").select("*").eq("email", email);
-          if (queryError) {
+          const queryResponse = await fetch("/api/users/email-exists", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          if (!queryResponse.ok) {
             toast({
                   title: "Query error",
-                  description: queryError.message,
+                  description: `Users API returned ${queryResponse.status}`,
                   variant: "destructive",
               });
             setIsSubmitting(false);
             return;
-          } else if (queryData.length !== 0) {
+          } else if ((await queryResponse.json()).exists) {
             toast({
               title: "Account already exists",
               description: "An account is already registered with this email.",
@@ -52,11 +57,6 @@ export const AuthForm = () => {
               return;
           }
 
-          if (data.user) {
-              await supabase.from("Users").upsert([
-                  { email: email, is_admin: false, auth_user_id: data.user.id }
-              ]);
-          }
           authData = data;
 
         } else {
@@ -71,15 +71,16 @@ export const AuthForm = () => {
                 return;
             }
 
-            if (data.user) {
-                await supabase.from("Users").upsert([
-                    { email: email, is_admin: false, auth_user_id: data.user.id }
-                ]);
-            }
             authData = data;
         }
 
         if (authData.session) {
+            const profileResponse = await authenticatedFetch("/api/users/me", {
+              method: "PUT",
+            });
+            if (!profileResponse.ok) {
+              throw new Error(`Users API returned ${profileResponse.status}`);
+            }
             // logged in
             toast({ title: "Signed in!", description: "Enjoy viewing!" });
         } else {

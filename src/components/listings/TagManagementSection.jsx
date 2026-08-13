@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../supabase-client";
 import { TagManagementCard } from "./TagManagementCard";
 
 export const TagManagementSection = ({ refreshFlag, onTagUpdate }) => {
     const [tags, setTags] = useState([]);
 
     const fetchAllTags = async () => {
-        const { error, data: tagData } = await supabase.from("ListingTag").select("name");
-
-        if (error) {
-            console.error("Error fetching all tags: ", error.message);
+        const response = await fetch("/api/listings/tags");
+        if (!response.ok) {
+            console.error("Error fetching all tags: ", response.status);
             return;
         }
+        const payload = await response.json();
+        const tagData = payload.results ?? [];
         setTags(tagData.map(row => row.name));
     }
 

@@ -1,12 +1,14 @@
 import { Trash } from "lucide-react"
-import { supabase } from "../../supabase-client"
+import { authenticatedFetch } from "@/lib/authenticated-fetch"
 
 
 export const DeleteListingButton = ({ listing, onDeleted }) => {
     const deleteListing = async (listingId) => {
-        const {error} = await supabase.from("Listings").delete().eq("id", listingId);
-        if (error) {
-            console.error("Error deleting listing:", error.message);
+        const response = await authenticatedFetch(`/api/listings/${listingId}`, {
+            method: "DELETE",
+        });
+        if (!response.ok) {
+            console.error("Error deleting listing:", response.status);
             return;
         } 
         if (onDeleted) {

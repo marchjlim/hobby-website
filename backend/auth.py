@@ -16,14 +16,14 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 # FastAPI Dependency injection: examines function params marked with Depends(...)
 # then runs those dependencies before the endpoint and passing their return values into the params
-def get_authenticated_supabase_client(
+def get_authenticated_access_token(
     # 'credentials' has the type HTTPAuthorizationCredentials | None, and FastAPI should obtain it using bearer_scheme.
     credentials: Annotated[
         HTTPAuthorizationCredentials | None,
         Depends(bearer_scheme),
     ],
-) -> Client:
-    """Validate the caller's JWT and return a user-scoped Supabase client."""
+) -> str:
+    """Extract and validate the caller's Supabase access token."""
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -43,6 +43,11 @@ def get_authenticated_supabase_client(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    # Attach the validated token only to this request's database client so
-    # PostgreSQL can enforce the signed-in user's RLS permissions.
+    return access_token
+
+
+def get_authenticated_supabase_client(
+    access_token: Annotated[str, Depends(get_authenticated_access_token)],
+) -> Client:
+    """Return a request-scoped client carrying the validated user's JWT."""
     return create_authenticated_client(access_token)

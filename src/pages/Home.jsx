@@ -11,16 +11,20 @@ import { AuthForm } from "../components/AuthForm";
 import { useEffect, useState } from 'react';
 import { supabase } from "../supabase-client";
 import { ChangelogSection } from "../components/ChangelogSection";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 
 export const Home = () => {
     const [session, setSession] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [sessionLoaded, setSessionLoaded] = useState(false);
+    const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
     const [apiMessage, setApiMessage] = useState("loading...");
 
     const fetchSession = async () => {
         const currentSession = await supabase.auth.getSession();
         setSession(currentSession.data.session);
+        setSessionLoaded(true);
     };
 
     const fetchApiMessage = async () => {
@@ -38,6 +42,7 @@ export const Home = () => {
         const { data: authListener } = supabase.auth.onAuthStateChange(
             (_event, session) => {
                 setSession(session);
+                setSessionLoaded(true);
             }
         );
 
@@ -47,35 +52,63 @@ export const Home = () => {
     }, []);
 
     useEffect(() => {
+        if (!sessionLoaded) {
+            return;
+        }
+
         console.log("Session updated:", session);
         const user = session?.user;
-
-        const fetchAdminStatus = async (userUUID) => {
-            const { data, error } = await supabase.from("Users")
-                                                    .select("is_admin")
-                                                    .eq("auth_user_id", userUUID)
-                                                    .single();
-            if (error) {
-                console.log("Error fetching admin status for user:", error.message);
-                return;
-            }
-
-            return data.is_admin;
-        }
+        let cancelled = false;
 
         const checkAdmin = async () => {
             if (user) {
-                const adminStatus = await fetchAdminStatus(user.id);
-                setIsAdmin(adminStatus);
+                setIsCheckingAdmin(true);
+                try {
+                    const response = await authenticatedFetch("/api/users/me");
+                    if (!response.ok) {
+                        console.log("Error fetching admin status:", response.status);
+                        if (!cancelled) {
+                            setIsAdmin(false);
+                        }
+                        return;
+                    }
+                    const payload = await response.json();
+                    if (!cancelled) {
+                        setIsAdmin(payload.user?.is_admin ?? false);
+                    }
+                } catch (error) {
+                    console.log("Error fetching admin status:", error.message);
+                    if (!cancelled) {
+                        setIsAdmin(false);
+                    }
+                } finally {
+                    if (!cancelled) {
+                        setIsCheckingAdmin(false);
+                    }
+                }
             } else {
                 setIsAdmin(false);
+                setIsCheckingAdmin(false);
             }
         }
 
         checkAdmin();
-    }, [session]);
-    
-    
+        return () => {
+            cancelled = true;
+        };
+    }, [session, sessionLoaded]);
+
+    const isLoadingHome = !sessionLoaded || (Boolean(session) && isCheckingAdmin);
+
+    if (isLoadingHome) {
+        return (
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                <p className="text-muted-foreground">Loading...</p>
+            </div>
+        );
+    }
+
+
     return (<div className="min-h-screen bg-background text-foreground overflow-x-hidden">
         
         {/* Theme Toggle */}
@@ -84,7 +117,12 @@ export const Home = () => {
             <StarBackground />
 
         {/* Navbar */}
-            <Navbar isSignedIn={session} isAdmin={isAdmin} />
+            <Navbar
+                isSignedIn={session}
+                isAdmin={isAdmin}
+                isSessionLoaded={sessionLoaded}
+                isCheckingAdmin={isCheckingAdmin}
+            />
 
         {/* Main Content */}
             <main>
@@ -94,7 +132,9 @@ export const Home = () => {
                 <ListingsSection />
                 <ContactSection />
                 <FaqSection />
-                <div className="mt-20">{!session && <AuthForm className="py-20"/>}</div>
+                <div className="mt-20">
+                    {sessionLoaded && !session && <AuthForm className="py-20"/>}
+                </div>
                 <ChangelogSection />
             </main>
 
