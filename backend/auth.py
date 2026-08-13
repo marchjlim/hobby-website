@@ -51,3 +51,22 @@ def get_authenticated_supabase_client(
 ) -> Client:
     """Return a request-scoped client carrying the validated user's JWT."""
     return create_authenticated_client(access_token)
+
+def require_admin(
+    access_token: Annotated[str, Depends(get_authenticated_access_token)],
+    client: Annotated[Client, Depends(get_authenticated_supabase_client)],
+) -> Client:
+    auth_user = supabase.auth.get_user(access_token).user
+    profile = (
+        client.table("Users")
+        .select("is_admin")
+        .eq("auth_user_id", str(auth_user.id))
+        .maybe_single()
+        .execute()
+    )
+    if not profile.data or not profile.data["is_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return client

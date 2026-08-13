@@ -21,6 +21,8 @@ export const ListingForm = ({ onListingCreated }) => {
 
     const [allTags, setAllTags] = useState([]);
     const [listingImage, setListingImage] = useState(null);
+    const [isSuggestingTags, setIsSuggestingTags] = useState(false);
+    const [tagSuggestionError, setTagSuggestionError] = useState("");
 
     const { toast } = useToast();
 
@@ -45,9 +47,37 @@ export const ListingForm = ({ onListingCreated }) => {
     }
 
     const handleFileChange = (event) => {
-        // store file into a state
-        if (event.target.files && event.target.files.length > 0) {
-            setListingImage(event.target.files[0]);
+        setListingImage(event.target.files?.[0] ?? null);
+        setTagSuggestionError("");
+    };
+
+    const generateTags = async () => {
+        if (!listingImage) return;
+
+        const body = new FormData();
+        body.append("image", listingImage);
+        setIsSuggestingTags(true);
+        setTagSuggestionError("");
+        try {
+            const response = await authenticatedFetch("/api/ai/suggest-listing-tags", {
+                method: "POST",
+                body,
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail ?? "Unable to suggest tags");
+
+            setTags((current) => {
+                const existing = new Set(current.map((tag) => tag.text.toLowerCase()));
+                return current.concat(
+                    payload.suggestions
+                        .map(({ tag }) => ({ id: tag, text: tag }))
+                        .filter((tag) => !existing.has(tag.text.toLowerCase()))
+                );
+            });
+        } catch (error) {
+            setTagSuggestionError(`${error.message}. Try again.`);
+        } finally {
+            setIsSuggestingTags(false);
         }
     };
 
@@ -309,12 +339,20 @@ export const ListingForm = ({ onListingCreated }) => {
                             className="hidden"
                         />
                     </label>
+                    <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary disabled:opacity-50"
+                            type="button"
+                            disabled={!listingImage || isSuggestingTags}
+                            onClick={generateTags}>
+                        {isSuggestingTags ? "Generating tags..." : "Generate tags"}
+                    </button>
                     <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary"
+                            type="button"
                             onClick={deleteAllTags}> 
                         Delete all tags
                         <Trash />
                     </button>
                 </span>
+                {tagSuggestionError && <span className="text-red-500">{tagSuggestionError}</span>}
                 
             </div>
             

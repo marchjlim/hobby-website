@@ -22,7 +22,6 @@ from database import supabase
 # how endpoints are grouped in those docs
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
-
 async def upload_listing_image(
     image: UploadFile,
     authenticated_supabase: Client,
