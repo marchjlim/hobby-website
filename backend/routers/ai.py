@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 MAX_PREDICTION_IMAGE_BYTES = 10 * 1024 * 1024
 ALLOWED_PREDICTION_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-
+MAX_TAG_SUGGESTIONS = 5
 
 class SuggestedTag(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -29,7 +29,7 @@ class SuggestedTag(BaseModel):
 class TagSuggestions(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    suggestions: list[SuggestedTag] = Field(max_length=5)
+    suggestions: list[SuggestedTag] = Field(max_length=MAX_TAG_SUGGESTIONS)
 
 
 def build_prompt(allowed_tags: list[str]) -> str:
@@ -42,7 +42,7 @@ def build_prompt(allowed_tags: list[str]) -> str:
         "- 'Standard Release' uaully applies when the item is not event limited, nor p-bandai, nor gundam base limited."
     ]
     instructions = (
-        "Suggest up to five tags for this Gundam box image. "
+        f"Suggest up to {MAX_TAG_SUGGESTIONS} tags for this Gundam box image. "
         "Use only exact tags from this allowed list: "
         + json.dumps(allowed_tags)
     )
@@ -66,12 +66,17 @@ def keep_allowed_suggestions(
     allowed_tags: list[str],
 ) -> list[SuggestedTag]:
     canonical = {tag.casefold(): tag for tag in allowed_tags}
-    kept = {}
+    kept = {} # maps tag str to SuggestedTag
     for suggestion in suggestions:
         tag = canonical.get(suggestion.tag.casefold())
-        if tag and (tag not in kept or suggestion.confidence > kept[tag].confidence):
-            kept[tag] = suggestion.model_copy(update={"tag": tag})
-    return sorted(kept.values(), key=lambda item: item.confidence, reverse=True)[:5]
+        if tag:
+            confidence = suggestion.confidence
+            curr_confidence = kept.get(tag, -1)
+            if tag not in kept or confidence > curr_confidence:
+                # add if tag is not yet added or confidences exceeds curr confidence
+                kept[tag] = suggestion.model_copy(update={"tag": tag})
+    
+    return sorted(kept.values(), key=lambda item: item.confidence, reverse=True)[:MAX_TAG_SUGGESTIONS]
 
 
 @router.post("/suggest-listing-tags")
