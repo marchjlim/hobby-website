@@ -15,7 +15,7 @@ from database import supabase
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 logger = logging.getLogger(__name__)
 
-MAX_PREDICTION_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_PREDICTION_IMAGE_BYTES = 4 * 1024 * 1024
 ALLOWED_PREDICTION_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_TAG_SUGGESTIONS = 5
 
@@ -89,7 +89,7 @@ def suggest_listing_tags(
 
     content = image.file.read(MAX_PREDICTION_IMAGE_BYTES + 1)
     if len(content) > MAX_PREDICTION_IMAGE_BYTES:
-        raise HTTPException(status_code=413, detail="Image must be 10 MB or smaller")
+        raise HTTPException(status_code=413, detail="Image must be 4 MB or smaller")
 
     tags_response = supabase.table("ListingTag").select("name").execute()
     allowed_tags = [row["name"] for row in tags_response.data]
