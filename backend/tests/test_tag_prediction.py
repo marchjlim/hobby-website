@@ -3,7 +3,6 @@ import unittest
 from routers.ai import (
     ListingDetailsSuggestion,
     SuggestedTag,
-    build_listing_details_prompt,
     build_prompt,
     keep_allowed_suggestions,
     parse_gemini_response,
@@ -31,7 +30,7 @@ class KeepAllowedSuggestionsTest(unittest.TestCase):
         self.assertIn('["RG", "Clear Color"]', prompt)
 
     def test_builds_listing_details_prompt(self):
-        prompt = build_listing_details_prompt(["RG"])
+        prompt = build_prompt(["RG"], include_name=True)
 
         self.assertIn("suggest a listing name", prompt)
         self.assertIn('["RG"]', prompt)

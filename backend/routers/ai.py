@@ -36,33 +36,27 @@ class ListingDetailsSuggestion(TagSuggestions):
     name: str = Field(description="Grade, scale, and product name from the packaging")
 
 
-def build_prompt(allowed_tags: list[str]) -> str:
-    RULES = [
+def build_prompt(allowed_tags: list[str], *, include_name: bool = False) -> str:
+    rules = [
         "- Grade tags such as HG, RG, MG, or PG refer to the product grade printed on the box. Select at most one grade.",
         "- 'Clear Color' applies only when the product or packaging explicitly indicates a transparent/clear-color edition.",
         "- 'Gundam Base Limited' applies only when the packaging indicates it.",
         "- 'Event limited' applies when the box contains 'Limited Item'",
-        "- 'P-bandai' usually applies when the box is greyscale and has no 'Limited item'",
-        "- 'Standard Release' uaully applies when the item is not event limited, nor p-bandai, nor gundam base limited."
+        "- 'P-bandai' usually applies when the box is monochrome/greyscale and has no 'Limited item'",
+        "- 'Standard Release' usually applies when the item is not event limited, P-Bandai, or Gundam Base Limited.",
     ]
-    instructions = (
+    instructions = []
+    if include_name:
+        instructions.append(
+            "Suggest a listing name formatted as grade, scale, then product name. "
+            "Include visible edition text."
+        )
+    instructions.append(
         f"Suggest up to {MAX_TAG_SUGGESTIONS} tags for this Gundam box image. "
         "Use only exact tags from this allowed list: "
         + json.dumps(allowed_tags)
     )
-    constraints = "\n".join(RULES)
-
-    prompt = instructions + "\n\nRules:\n" + constraints
-    
-    return prompt
-
-
-def build_listing_details_prompt(allowed_tags: list[str]) -> str:
-    return (
-        "Read this Gundam product box and suggest a listing name. "
-        "Format the name as grade, scale, then product name, and include visible edition text.\n\n"
-        + build_prompt(allowed_tags)
-    )
+    return "\n\n".join(instructions) + "\n\nRules:\n" + "\n".join(rules)
 
 
 def parse_gemini_tag_suggestions(response_data: dict) -> TagSuggestions:
@@ -76,6 +70,11 @@ def parse_gemini_response(response_data: dict, schema: type[BaseModel]) -> BaseM
         if "text" in part and not part.get("thought")
     )
     return schema.model_validate_json(output_text)
+
+
+def get_allowed_tags() -> list[str]:
+    response = supabase.table("ListingTag").select("name").execute()
+    return [row["name"] for row in response.data]
 
 
 def keep_allowed_suggestions(
@@ -171,31 +170,6 @@ def request_gemini(
     return parsed
 
 
-def get_allowed_tags() -> list[str]:
-    response = supabase.table("ListingTag").select("name").execute()
-    return [row["name"] for row in response.data]
-
-
-@router.post("/suggest-listing-tags")
-def suggest_listing_tags(
-    image: UploadFile = File(),
-    _: Client = Depends(require_admin),
-):
-    content = read_prediction_image(image)
-    allowed_tags = get_allowed_tags()
-    if not allowed_tags:
-        return {"suggestions": []}
-
-    parsed = request_gemini(
-        content,
-        image.content_type,
-        build_prompt(allowed_tags),
-        TagSuggestions,
-    )
-    suggestions = keep_allowed_suggestions(parsed.suggestions, allowed_tags)
-    return {"suggestions": [suggestion.model_dump() for suggestion in suggestions]}
-
-
 @router.post("/suggest-listing-details")
 def suggest_listing_details(
     image: UploadFile = File(),
@@ -206,7 +180,7 @@ def suggest_listing_details(
     parsed = request_gemini(
         content,
         image.content_type,
-        build_listing_details_prompt(allowed_tags),
+        build_prompt(allowed_tags, include_name=True),
         ListingDetailsSuggestion,
     )
     suggestions = keep_allowed_suggestions(parsed.suggestions, allowed_tags)
