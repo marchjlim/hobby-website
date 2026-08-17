@@ -134,6 +134,9 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                                     <img src={listing.image_url} 
                                         className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
                                      />
+                                    {listing.description && (
+                                        <p className="text-sm text-left text-muted-foreground whitespace-pre-line">{listing.description}</p>
+                                    )}
                                     <div className="flex w-full justify-between">
                                         <PriceTag price={listing.carousell_price} platform="Carousell" />
                                         <CarousellLink link={listing.link} />    

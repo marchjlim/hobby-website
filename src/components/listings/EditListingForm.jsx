@@ -10,6 +10,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
 
     const [formData, setFormData] = useState({
         listingName: listing.name,
+        listingDescription: listing.description ?? "",
         listingImg: listing.image_url,
         listingTags: formattedInitialListingTags,
         listingPrice: listing.price,
@@ -40,6 +41,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         requestBody.append("payload", JSON.stringify({
             name: formData.listingName,
             image_url: formData.listingImg,
+            description: formData.listingDescription,
             price: Number(formData.listingPrice),
             link: formData.listingLink,
             is_preorder: formData.listingIsPreorder,
@@ -163,6 +165,16 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                        onChange={(event) => {
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
+
+                <span className="text-center">Description</span>
+                <textarea
+                    name="description"
+                    placeholder="Listing description"
+                    maxLength={1000}
+                    className="w-full min-h-24 px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
+                    value={formData.listingDescription}
+                    onChange={(event) => setFormData((prev) => ({...prev, listingDescription: event.target.value}))}
+                />
 
                 <div className="flex flex-row gap-2">
                     <div className="flex flex-col">

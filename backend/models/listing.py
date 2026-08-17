@@ -9,6 +9,7 @@ class Listing(SupabaseModel):
     id: int | None = None
     name: str
     image_url: str | None = None
+    description: str | None = None
     price: float
     link: str | None = None
     is_preorder: bool = False
@@ -27,6 +28,7 @@ class ListingUpdate(SupabaseModel):
     image_url: str | None = None
     price: float | None = Field(default=None, ge=0)
     link: str | None = None
+    description: str | None = Field(default=None, max_length=1000)
     is_preorder: bool | None = None
     deposit: float | None = Field(default=None, ge=0)
     arrival_date: str | None = None
@@ -41,6 +43,7 @@ class ListingCreationRequest(BaseModel):
     price: float = Field(ge=0)
     link: str | None = None
     is_preorder: bool = False
+    description: str | None = Field(default=None, max_length=1000)
     deposit: float | None = Field(default=None, ge=0)
     arrival_date: str | None = None
     is_restocking: bool = False
@@ -58,6 +61,7 @@ class ListingCreationRequest(BaseModel):
             is_preorder=self.is_preorder,
             deposit=self.deposit,
             arrival_date=self.arrival_date,
+            description=self.description,
             is_restocking=self.is_restocking,
             carousell_price=self.carousell_price,
             telegram_link=self.telegram_link,
@@ -74,6 +78,7 @@ class ListingUpdateRequest(BaseModel):
     arrival_date: str | None = None
     is_restocking: bool | None = None
     carousell_price: float | None = Field(default=None, ge=0)
+    description: str | None = Field(default=None, max_length=1000)
     telegram_link: str | None = None
     tags: list[str] | None = None
 
