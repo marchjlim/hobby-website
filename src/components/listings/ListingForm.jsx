@@ -21,7 +21,7 @@ export const ListingForm = ({ onListingCreated }) => {
 
     const [allTags, setAllTags] = useState([]);
     const [listingImage, setListingImage] = useState(null);
-    const [generatingAction, setGeneratingAction] = useState(null);
+    const [isGeneratingDetails, setIsGeneratingDetails] = useState(false);
     const [generationError, setGenerationError] = useState("");
 
     const { toast } = useToast();
@@ -51,17 +51,15 @@ export const ListingForm = ({ onListingCreated }) => {
         setGenerationError("");
     };
 
-    const generateSuggestions = async (action) => {
+    const generateListingDetails = async () => {
         if (!listingImage) return;
 
         const body = new FormData();
         body.append("image", listingImage);
-        setGeneratingAction(action);
+        setIsGeneratingDetails(true);
         setGenerationError("");
         try {
-            const endpoint = action === "details"
-                ? "/api/ai/suggest-listing-details"
-                : "/api/ai/suggest-listing-tags";
+            const endpoint = "/api/ai/suggest-listing-details";
             const response = await authenticatedFetch(endpoint, {
                 method: "POST",
                 body,
@@ -69,7 +67,7 @@ export const ListingForm = ({ onListingCreated }) => {
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.detail ?? "Unable to generate suggestions");
 
-            if (action === "details" && payload.name) {
+            if (payload.name) {
                 setFormData((current) => current.listingName
                     ? current
                     : {...current, listingName: payload.name});
@@ -85,7 +83,7 @@ export const ListingForm = ({ onListingCreated }) => {
         } catch (error) {
             setGenerationError(`${error.message}. Try again.`);
         } finally {
-            setGeneratingAction(null);
+            setIsGeneratingDetails(false);
         }
     };
 
@@ -349,15 +347,9 @@ export const ListingForm = ({ onListingCreated }) => {
                     </label>
                     <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary disabled:opacity-50"
                             type="button"
-                            disabled={!listingImage || generatingAction !== null}
-                            onClick={() => generateSuggestions("tags")}>
-                        {generatingAction === "tags" ? "Generating tags..." : "Generate tags"}
-                    </button>
-                    <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary disabled:opacity-50"
-                            type="button"
-                            disabled={!listingImage || generatingAction !== null}
-                            onClick={() => generateSuggestions("details")}>
-                        {generatingAction === "details" ? "Generating details..." : "Generate listing details"}
+                            disabled={!listingImage || isGeneratingDetails}
+                            onClick={generateListingDetails}>
+                        {isGeneratingDetails ? "Generating details..." : "Generate listing details"}
                     </button>
                     <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary"
                             type="button"

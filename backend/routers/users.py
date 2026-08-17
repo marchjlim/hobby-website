@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
 
@@ -7,6 +9,7 @@ from models.user import EmailExistsRequest
 
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/email-exists")
@@ -39,6 +42,7 @@ def get_current_user(
         )
         return {"user": response.data}
     except Exception as exc:
+        logger.exception("Unable to fetch user profile")
         raise HTTPException(status_code=503, detail="Unable to fetch user profile") from exc
 
 
