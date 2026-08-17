@@ -21,8 +21,8 @@ export const ListingForm = ({ onListingCreated }) => {
 
     const [allTags, setAllTags] = useState([]);
     const [listingImage, setListingImage] = useState(null);
-    const [isSuggestingTags, setIsSuggestingTags] = useState(false);
-    const [tagSuggestionError, setTagSuggestionError] = useState("");
+    const [isGeneratingDetails, setIsGeneratingDetails] = useState(false);
+    const [generationError, setGenerationError] = useState("");
 
     const { toast } = useToast();
 
@@ -48,24 +48,30 @@ export const ListingForm = ({ onListingCreated }) => {
 
     const handleFileChange = (event) => {
         setListingImage(event.target.files?.[0] ?? null);
-        setTagSuggestionError("");
+        setGenerationError("");
     };
 
-    const generateTags = async () => {
+    const generateListingDetails = async () => {
         if (!listingImage) return;
 
         const body = new FormData();
         body.append("image", listingImage);
-        setIsSuggestingTags(true);
-        setTagSuggestionError("");
+        setIsGeneratingDetails(true);
+        setGenerationError("");
         try {
-            const response = await authenticatedFetch("/api/ai/suggest-listing-tags", {
+            const endpoint = "/api/ai/suggest-listing-details";
+            const response = await authenticatedFetch(endpoint, {
                 method: "POST",
                 body,
             });
             const payload = await response.json();
-            if (!response.ok) throw new Error(payload.detail ?? "Unable to suggest tags");
+            if (!response.ok) throw new Error(payload.detail ?? "Unable to generate suggestions");
 
+            if (payload.name) {
+                setFormData((current) => current.listingName
+                    ? current
+                    : {...current, listingName: payload.name});
+            }
             setTags((current) => {
                 const existing = new Set(current.map((tag) => tag.text.toLowerCase()));
                 return current.concat(
@@ -75,9 +81,9 @@ export const ListingForm = ({ onListingCreated }) => {
                 );
             });
         } catch (error) {
-            setTagSuggestionError(`${error.message}. Try again.`);
+            setGenerationError(`${error.message}. Try again.`);
         } finally {
-            setIsSuggestingTags(false);
+            setIsGeneratingDetails(false);
         }
     };
 
@@ -341,9 +347,9 @@ export const ListingForm = ({ onListingCreated }) => {
                     </label>
                     <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary disabled:opacity-50"
                             type="button"
-                            disabled={!listingImage || isSuggestingTags}
-                            onClick={generateTags}>
-                        {isSuggestingTags ? "Generating tags..." : "Generate tags"}
+                            disabled={!listingImage || isGeneratingDetails}
+                            onClick={generateListingDetails}>
+                        {isGeneratingDetails ? "Generating details..." : "Generate listing details"}
                     </button>
                     <button className="flex flex-row px-3 py-2 font-medium rounded-full bg-primary"
                             type="button"
@@ -352,7 +358,7 @@ export const ListingForm = ({ onListingCreated }) => {
                         <Trash />
                     </button>
                 </span>
-                {tagSuggestionError && <span className="text-red-500">{tagSuggestionError}</span>}
+                {generationError && <span className="text-red-500">{generationError}</span>}
                 
             </div>
             
