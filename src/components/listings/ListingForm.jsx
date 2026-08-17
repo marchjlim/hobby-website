@@ -7,6 +7,7 @@ import { Trash } from 'lucide-react';
 export const ListingForm = ({ onListingCreated }) => {
     const [formData, setFormData] = useState({
         listingName: "",
+        listingDescription: "",
         listingImg: "",
         listingTags: [],
         listingPrice: null,
@@ -23,6 +24,7 @@ export const ListingForm = ({ onListingCreated }) => {
     const [listingImage, setListingImage] = useState(null);
     const [isGeneratingDetails, setIsGeneratingDetails] = useState(false);
     const [generationError, setGenerationError] = useState("");
+    const [pricingRationale, setPricingRationale] = useState("");
 
     const { toast } = useToast();
 
@@ -67,15 +69,18 @@ export const ListingForm = ({ onListingCreated }) => {
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.detail ?? "Unable to generate suggestions");
 
-            if (payload.name) {
-                setFormData((current) => current.listingName
-                    ? current
-                    : {...current, listingName: payload.name});
-            }
+            setFormData((current) => ({
+                ...current,
+                listingName: current.listingName || payload.name || "",
+                listingDescription: current.listingDescription || payload.description || "",
+                listingPrice: current.listingPrice ?? payload.suggested_price ?? null,
+                carousellPrice: current.carousellPrice ?? payload.suggested_carousell_price ?? null,
+            }));
+            setPricingRationale(payload.pricing_rationale ?? "");
             setTags((current) => {
                 const existing = new Set(current.map((tag) => tag.text.toLowerCase()));
                 return current.concat(
-                    payload.suggestions
+                    payload.tag_suggestions
                         .map(({ tag }) => ({ id: tag, text: tag }))
                         .filter((tag) => !existing.has(tag.text.toLowerCase()))
                 );
@@ -93,6 +98,7 @@ export const ListingForm = ({ onListingCreated }) => {
         requestBody.append("payload", JSON.stringify({
             name: formData.listingName,
             price: Number(formData.listingPrice),
+            description: formData.listingDescription,
             link: formData.listingLink,
             is_preorder: formData.listingIsPreorder,
             deposit: formData.listingDeposit === null ? null : Number(formData.listingDeposit),
@@ -120,6 +126,7 @@ export const ListingForm = ({ onListingCreated }) => {
         setFormData({
             listingName:"",
             listingImg: "",
+            listingDescription: "",
             listingTags: [],
             listingPrice: null,
             listingLink: "", 
@@ -128,10 +135,12 @@ export const ListingForm = ({ onListingCreated }) => {
             listingArrival: "",
             carousellPrice: null,
             listingIsRestocking: false,
+            listingTelegramLink: "https://t.me/plasticmethenjoyer",
         });
         setTags([]);
         setListingImage(null);
 
+        setPricingRationale("");
         await fetchAllTags();
         await onListingCreated();
 
@@ -233,6 +242,27 @@ export const ListingForm = ({ onListingCreated }) => {
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
 
+                <div className="space-y-2">
+                    <div className="flex items-end justify-between gap-4">
+                        <label htmlFor="listing-description" className="text-secondary text-2xl md:text-3xl font-semibold">
+                            Description
+                        </label>
+                        <span className="text-xs tabular-nums text-muted-foreground" aria-live="polite">
+                            {formData.listingDescription.length} / 1000
+                        </span>
+                    </div>
+                    <textarea
+                        id="listing-description"
+                        name="description"
+                        placeholder="Describe the kit, condition, included accessories, and anything buyers should know?"
+                        maxLength={1000}
+                        rows={5}
+                        className="w-full resize-y rounded-xl border border-input bg-primary/[0.06] px-4 py-3 leading-relaxed shadow-inner transition-colors placeholder:text-muted-foreground/60 hover:border-primary/50 hover:bg-primary/[0.08] focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/30"
+                        value={formData.listingDescription}
+                        onChange={(event) => setFormData((prev) => ({...prev, listingDescription: event.target.value}))}
+                    />
+                </div>
+
                 <span className="text-secondary text-2xl md:text-3xl font-semibold">Price</span>
                 <div className="flex flex-row gap-2">
                     <input name="price" 
@@ -257,6 +287,7 @@ export const ListingForm = ({ onListingCreated }) => {
                 </div>
                 
 
+                {pricingRationale && <p className="text-sm text-muted-foreground">{pricingRationale}</p>}
                 <RestockingCheckbox />
                 <PreorderCheckbox />
                 {formData.listingIsPreorder && <input
