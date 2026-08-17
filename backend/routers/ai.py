@@ -36,7 +36,7 @@ class ListingDetailsSuggestion(BaseModel):
     suggested_price: float = Field(ge=0)
     suggested_carousell_price: float = Field(ge=0)
     pricing_rationale: str
-    suggestions: list[SuggestedTag] = Field(max_length=MAX_TAG_SUGGESTIONS)
+    tag_suggestions: list[SuggestedTag] = Field(max_length=MAX_TAG_SUGGESTIONS)
 
 
 def build_prompt(allowed_tags: list[str], comparables: list[dict]) -> str:
@@ -92,13 +92,13 @@ def get_price_comparables() -> list[dict]:
         return []
 
 
-def keep_allowed_suggestions(
-    suggestions: list[SuggestedTag],
+def keep_allowed_tag_suggestions(
+    suggested_tags: list[SuggestedTag],
     allowed_tags: list[str],
 ) -> list[SuggestedTag]:
     canonical = {tag.casefold(): tag for tag in allowed_tags}
     kept = {}
-    for suggestion in suggestions:
+    for suggestion in suggested_tags:
         tag = canonical.get(suggestion.tag.casefold())
         if tag:
             current = kept.get(tag)
@@ -198,12 +198,12 @@ def suggest_listing_details(
         build_prompt(allowed_tags, get_price_comparables()),
         ListingDetailsSuggestion,
     )
-    suggestions = keep_allowed_suggestions(parsed.suggestions, allowed_tags)
+    tag_suggestions = keep_allowed_tag_suggestions(parsed.tag_suggestions, allowed_tags)
     return {
         "name": parsed.name,
         "description": parsed.description,
         "suggested_price": parsed.suggested_price,
         "suggested_carousell_price": parsed.suggested_carousell_price,
         "pricing_rationale": parsed.pricing_rationale,
-        "suggestions": [suggestion.model_dump() for suggestion in suggestions],
+        "tag_suggestions": [suggestion.model_dump() for suggestion in tag_suggestions],
     }

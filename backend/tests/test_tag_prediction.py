@@ -4,14 +4,14 @@ from routers.ai import (
     ListingDetailsSuggestion,
     SuggestedTag,
     build_prompt,
-    keep_allowed_suggestions,
+    keep_allowed_tag_suggestions,
     parse_gemini_response,
 )
 
 
 class ListingSuggestionTest(unittest.TestCase):
     def test_filters_normalizes_deduplicates_and_sorts_tags(self):
-        result = keep_allowed_suggestions(
+        result = keep_allowed_tag_suggestions(
             [
                 SuggestedTag(tag="rg", confidence=0.4),
                 SuggestedTag(tag="invented", confidence=1),
@@ -49,7 +49,7 @@ class ListingSuggestionTest(unittest.TestCase):
                                     '"suggested_price":55,'
                                     '"suggested_carousell_price":60,'
                                     '"pricing_rationale":"Based on a comparable RG listing.",'
-                                    '"suggestions":[{"tag":"RG","confidence":0.9}]}'
+                                    '"tag_suggestions":[{"tag":"RG","confidence":0.9}]}'
                                 ),
                             },
                         ]

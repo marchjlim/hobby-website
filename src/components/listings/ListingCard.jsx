@@ -135,7 +135,9 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                                         className="w-70 h-70 object-contain transition-transform duration-500 group-hover:scale-110" 
                                      />
                                     {listing.description && (
-                                        <p className="text-sm text-left text-muted-foreground whitespace-pre-line">{listing.description}</p>
+                                        <p className="w-full whitespace-pre-line rounded-lg border border-border bg-background px-3 py-2 text-left text-sm leading-relaxed text-foreground/80">
+                                            {listing.description}
+                                        </p>
                                     )}
                                     <div className="flex w-full justify-between">
                                         <PriceTag price={listing.carousell_price} platform="Carousell" />

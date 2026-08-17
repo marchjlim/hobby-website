@@ -166,15 +166,26 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                         setFormData((prev) => ({...prev, listingName: event.target.value }));
                        }} />
 
-                <span className="text-center">Description</span>
-                <textarea
-                    name="description"
-                    placeholder="Listing description"
-                    maxLength={1000}
-                    className="w-full min-h-24 px-3 py-1 rounded-md border border-input bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
-                    value={formData.listingDescription}
-                    onChange={(event) => setFormData((prev) => ({...prev, listingDescription: event.target.value}))}
-                />
+                <div className="space-y-2">
+                    <div className="flex items-end justify-between gap-4">
+                        <label htmlFor="edit-listing-description" className="font-medium text-secondary">
+                            Description
+                        </label>
+                        <span className="text-xs tabular-nums text-muted-foreground" aria-live="polite">
+                            {formData.listingDescription.length} / 1000
+                        </span>
+                    </div>
+                    <textarea
+                        id="edit-listing-description"
+                        name="description"
+                        placeholder="Describe the kit, condition, included accessories, and anything buyers should know?"
+                        maxLength={1000}
+                        rows={5}
+                        className="w-full resize-y rounded-xl border border-input bg-primary/[0.06] px-4 py-3 leading-relaxed shadow-inner transition-colors placeholder:text-muted-foreground/60 hover:border-primary/50 hover:bg-primary/[0.08] focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/30"
+                        value={formData.listingDescription}
+                        onChange={(event) => setFormData((prev) => ({...prev, listingDescription: event.target.value}))}
+                    />
+                </div>
 
                 <div className="flex flex-row gap-2">
                     <div className="flex flex-col">
