@@ -13,6 +13,7 @@ const navItems = [
 ];
 
 const adminNavItems = [
+    {name: "Products", href: "/products"},
     {name: "Listings", href: "#listings"},
     {name: "Tags", href:"#tags"},
 ];

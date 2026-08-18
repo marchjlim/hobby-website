@@ -179,11 +179,10 @@ def get_price_comparables(tags: list[str]) -> list[dict]:
 def get_product_metadata(name: str) -> dict | None:
     try:
         response = (
-            supabase.table("Products")
+            supabase.table("products")
             .select(
                 "id,canonical_name,grade,scale,msrp,msrp_currency,"
-                "original_release_date,last_reproduction_date,source_url,"
-                "metadata_checked_at"
+                "original_release_date,last_reproduction_date"
             )
             .ilike("canonical_name", name)
             .limit(1)

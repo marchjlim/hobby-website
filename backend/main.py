@@ -3,13 +3,14 @@ from fastapi import FastAPI
 from routers.ai import router as ai_router
 from routers.search import router as search_router
 from routers.listings import router as listings_router
+from routers.products import router as products_router
 from routers.users import router as users_router
 
 def include_routers(app, routers):
     for router in routers:
         app.include_router(router)
 
-ROUTERS = [ai_router, search_router, listings_router, users_router]
+ROUTERS = [ai_router, search_router, listings_router, products_router, users_router]
 app = FastAPI(title="Gundam Listings API")
 include_routers(app, ROUTERS)
 

@@ -6,9 +6,7 @@ create table if not exists public."Products" (
     msrp numeric check (msrp >= 0),
     msrp_currency text not null default 'JPY',
     original_release_date date,
-    last_reproduction_date date,
-    source_url text,
-    metadata_checked_at timestamptz
+    last_reproduction_date date
 );
 
 alter table public."Listings"
