@@ -64,6 +64,14 @@ class ListingDetailsSuggestion(BaseModel):
     tag_suggestions: list[SuggestedTag] = Field(max_length=MAX_TAG_SUGGESTIONS)
 
 
+class PricingAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    suggested_price: float | None = Field(default=None, ge=0)
+    suggested_carousell_price: float | None = Field(default=None, ge=0)
+    rationale: str = Field(max_length=500)
+
+
 def build_prompt(allowed_tags: list[str]) -> str:
     rules = [
         "- Grade tags such as HG, RG, MG, or PG refer to the product grade printed on the box. Select at most one grade.",
@@ -254,6 +262,54 @@ def calculate_pricing(
     }
 
 
+def build_pricing_prompt(
+    name: str,
+    tags: list[str],
+    pricing: dict,
+) -> str:
+    evidence = {
+        "listing_name": name,
+        "tags": tags,
+        "comparables": pricing["pricing_comparables"],
+        "product_metadata": pricing["product_metadata"],
+        "baseline": {
+            "website_price": pricing["suggested_price"],
+            "carousell_price": pricing["suggested_carousell_price"],
+        },
+    }
+    return (
+        "Act as a pricing analyst for a Singapore Gundam store. Recommend SGD website "
+        "and Carousell prices using only the retrieved evidence below. Consider tag "
+        "similarity, MSRP, release recency, and comparable prices. Do not invent market "
+        "facts. Return null for a channel with no supporting price evidence. Briefly "
+        "explain which evidence affected the recommendation.\n\nRetrieved evidence:\n"
+        + json.dumps(evidence, default=str)
+    )
+
+
+def apply_pricing_analysis(pricing: dict, analysis: PricingAnalysis) -> dict:
+    result = dict(pricing)
+    for output_key, comparable_key in (
+        ("suggested_price", "price"),
+        ("suggested_carousell_price", "carousell_price"),
+    ):
+        prices = [
+            float(item[comparable_key])
+            for item in pricing["pricing_comparables"]
+            if item.get(comparable_key) is not None
+        ]
+        suggestion = getattr(analysis, output_key)
+        if (
+            suggestion is not None
+            and len(prices) >= MIN_COMPARABLE_PRICES
+            and min(prices) <= suggestion <= max(prices)
+        ):
+            result[output_key] = round(suggestion, 2)
+
+    result["pricing_rationale"] = analysis.rationale
+    return result
+
+
 def record_pricing_suggestion(
     client: Client,
     tags: list[str],
@@ -315,10 +371,10 @@ def read_prediction_image(image: UploadFile) -> bytes:
 
 
 def request_gemini(
-    content: bytes,
-    content_type: str,
     prompt: str,
     schema: type[BaseModel],
+    content: bytes | None = None,
+    content_type: str | None = None,
 ) -> BaseModel:
     if not os.getenv("GEMINI_API_KEY"):
         raise HTTPException(status_code=503, detail="AI listing generation is not configured")
@@ -333,15 +389,12 @@ def request_gemini(
             headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
             json={
                 "contents": [{
-                    "parts": [
-                        {
-                            "inline_data": {
-                                "mime_type": content_type,
-                                "data": base64.b64encode(content).decode("ascii"),
-                            }
-                        },
-                        {"text": prompt},
-                    ],
+                    "parts": ([{
+                        "inline_data": {
+                            "mime_type": content_type,
+                            "data": base64.b64encode(content).decode("ascii"),
+                        }
+                    }] if content is not None else []) + [{"text": prompt}],
                 }],
                 "generationConfig": {
                     "responseFormat": {
@@ -386,10 +439,10 @@ def suggest_listing_details(
     content = read_prediction_image(image)
     allowed_tags = get_allowed_tags()
     parsed = request_gemini(
-        content,
-        image.content_type,
         build_prompt(allowed_tags),
         ListingDetailsSuggestion,
+        content,
+        image.content_type,
     )
     tag_suggestions = keep_allowed_tag_suggestions(
         parsed.tag_suggestions,
@@ -398,6 +451,15 @@ def suggest_listing_details(
     tag_names = [suggestion.tag for suggestion in tag_suggestions]
     product_metadata = get_product_metadata(parsed.name)
     pricing = calculate_pricing(get_price_comparables(tag_names), product_metadata)
+    if pricing["pricing_comparables"]:
+        try:
+            analysis = request_gemini(
+                build_pricing_prompt(parsed.name, tag_names, pricing),
+                PricingAnalysis,
+            )
+            pricing = apply_pricing_analysis(pricing, analysis)
+        except HTTPException:
+            logger.warning("Gemini pricing analysis failed; using baseline pricing")
     pricing_suggestion_id = record_pricing_suggestion(
         authenticated_supabase,
         tag_names,

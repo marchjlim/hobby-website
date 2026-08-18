@@ -2,8 +2,11 @@ import unittest
 
 from routers.ai import (
     ListingDetailsSuggestion,
+    PricingAnalysis,
     SuggestedTag,
+    apply_pricing_analysis,
     build_prompt,
+    build_pricing_prompt,
     calculate_pricing,
     keep_allowed_tag_suggestions,
     parse_gemini_response,
@@ -148,6 +151,28 @@ class ListingSuggestionTest(unittest.TestCase):
         self.assertIsNone(pricing["suggested_carousell_price"])
         self.assertIn("SGD MSRP", pricing["pricing_rationale"])
 
+    def test_pricing_analyst_is_grounded_in_retrieved_evidence(self):
+        pricing = calculate_pricing([
+            {"id": 1, "name": "A", "price": 40, "carousell_price": 45,
+             "matched_tags": ["RG"]},
+            {"id": 2, "name": "B", "price": 60, "carousell_price": 65,
+             "matched_tags": ["RG"]},
+        ])
+
+        prompt = build_pricing_prompt("RG Nu Gundam", ["RG"], pricing)
+        result = apply_pricing_analysis(
+            pricing,
+            PricingAnalysis(
+                suggested_price=55,
+                suggested_carousell_price=100,
+                rationale="Closest RG comparables support the website price.",
+            ),
+        )
+
+        self.assertIn('"comparables"', prompt)
+        self.assertEqual(result["suggested_price"], 55)
+        self.assertEqual(result["suggested_carousell_price"], 55)
+        self.assertIn("Closest RG", result["pricing_rationale"])
 
 if __name__ == "__main__":
     unittest.main()
