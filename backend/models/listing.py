@@ -50,6 +50,7 @@ class ListingCreationRequest(BaseModel):
     carousell_price: float | None = Field(default=None, ge=0)
     telegram_link: str | None = None
     tags: list[str] = Field(default_factory=list)
+    pricing_suggestion_id: str | None = None
 
     def to_listing(self, *, image_url: str | None = None) -> Listing:
         """Convert API creation data into a Listings table model."""

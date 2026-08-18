@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 from pathlib import Path
 from uuid import uuid4
@@ -21,6 +22,7 @@ from database import supabase
 # tags param: for documentation. FastAPI automatically generates Swagger docs at /docs, the tags controls
 # how endpoints are grouped in those docs
 router = APIRouter(prefix="/api/listings", tags=["listings"])
+logger = logging.getLogger(__name__)
 
 async def upload_listing_image(
     image: UploadFile,
@@ -186,6 +188,23 @@ async def create_listing(
             raise HTTPException(status_code=502, detail="Supabase did not return the listing")
         created_listing = response.data[0]
         sync_listing_tags(authenticated_supabase, created_listing["id"], request.tags)
+        if request.pricing_suggestion_id:
+            try:
+                (
+                    authenticated_supabase.table("AiPricingSuggestions")
+                    .update({
+                        "accepted_listing_id": created_listing["id"],
+                        "accepted_price": created_listing["price"],
+                        "accepted_carousell_price": created_listing.get("carousell_price"),
+                    })
+                    .eq("id", request.pricing_suggestion_id)
+                    .execute()
+                )
+            except Exception:
+                logger.warning(
+                    "Unable to record the accepted AI price",
+                    exc_info=True,
+                )
         return {"result": created_listing}
     except HTTPException:
         raise

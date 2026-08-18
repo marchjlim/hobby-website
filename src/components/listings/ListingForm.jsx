@@ -25,6 +25,7 @@ export const ListingForm = ({ onListingCreated }) => {
     const [isGeneratingDetails, setIsGeneratingDetails] = useState(false);
     const [generationError, setGenerationError] = useState("");
     const [pricingRationale, setPricingRationale] = useState("");
+    const [pricingSuggestionId, setPricingSuggestionId] = useState(null);
 
     const { toast } = useToast();
 
@@ -51,6 +52,8 @@ export const ListingForm = ({ onListingCreated }) => {
     const handleFileChange = (event) => {
         setListingImage(event.target.files?.[0] ?? null);
         setGenerationError("");
+        setPricingRationale("");
+        setPricingSuggestionId(null);
     };
 
     const generateListingDetails = async () => {
@@ -77,6 +80,7 @@ export const ListingForm = ({ onListingCreated }) => {
                 carousellPrice: current.carousellPrice ?? payload.suggested_carousell_price ?? null,
             }));
             setPricingRationale(payload.pricing_rationale ?? "");
+            setPricingSuggestionId(payload.pricing_suggestion_id ?? null);
             setTags((current) => {
                 const existing = new Set(current.map((tag) => tag.text.toLowerCase()));
                 return current.concat(
@@ -107,6 +111,7 @@ export const ListingForm = ({ onListingCreated }) => {
             carousell_price: formData.carousellPrice === null ? null : Number(formData.carousellPrice),
             telegram_link: formData.listingTelegramLink,
             tags: tags.map(tag => tag.text),
+            pricing_suggestion_id: pricingSuggestionId,
         }));
         if (listingImage) {
             requestBody.append("image", listingImage);
@@ -141,6 +146,7 @@ export const ListingForm = ({ onListingCreated }) => {
         setListingImage(null);
 
         setPricingRationale("");
+        setPricingSuggestionId(null);
         await fetchAllTags();
         await onListingCreated();
 
