@@ -15,6 +15,7 @@ export const ListingForm = ({ onListingCreated }) => {
         listingLink: "",
         listingIsPreorder: false,
         listingIsRestocking: false,
+        listingIsActive: true,
         listingDeposit: null,   
         listingArrival: "",
         listingTelegramLink:"https://t.me/plasticmethenjoyer",
@@ -108,6 +109,7 @@ export const ListingForm = ({ onListingCreated }) => {
             deposit: formData.listingDeposit === null ? null : Number(formData.listingDeposit),
             arrival_date: formData.listingArrival,
             is_restocking: formData.listingIsRestocking,
+            is_active: formData.listingIsActive,
             carousell_price: formData.carousellPrice === null ? null : Number(formData.carousellPrice),
             telegram_link: formData.listingTelegramLink,
             tags: tags.map(tag => tag.text),
@@ -140,6 +142,7 @@ export const ListingForm = ({ onListingCreated }) => {
             listingArrival: "",
             carousellPrice: null,
             listingIsRestocking: false,
+            listingIsActive: true,
             listingTelegramLink: "https://t.me/plasticmethenjoyer",
         });
         setTags([]);
@@ -294,6 +297,18 @@ export const ListingForm = ({ onListingCreated }) => {
                 
 
                 {pricingRationale && <p className="text-sm text-muted-foreground">{pricingRationale}</p>}
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={formData.listingIsActive}
+                        onChange={(event) => setFormData((prev) => ({
+                            ...prev,
+                            listingIsActive: event.target.checked,
+                        }))}
+                        className="h-4 w-4 accent-primary"
+                    />
+                    <span className="text-sm font-medium">Active listing</span>
+                </label>
                 <RestockingCheckbox />
                 <PreorderCheckbox />
                 {formData.listingIsPreorder && <input

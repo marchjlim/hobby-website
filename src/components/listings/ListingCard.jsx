@@ -37,7 +37,7 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
         </button>
     );
 
-    const PriceTag = ({ price, platform, currency = "SGD", className = "" }) => {
+    const PriceTag = ({ price, platform, className = "" }) => {
         return (
             <div
             className={`inline-flex items-center px-3 py-1 rounded-full bg-primary/80 text-white text-sm font-semibold shadow-sm ${className}`}
@@ -105,7 +105,7 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
 
 
 
-    return <div key={key} className="bg-card p-6 rounded-lg shadow-xs card-hover"> 
+    return <div key={key} className={`${listing.is_active === false ? "bg-primary/15" : "bg-card"} p-6 rounded-lg shadow-xs card-hover`}>
                 { isEditing ? (<EditListingForm listing={listing} initialListingTags={tags}
                                                 onListingEdited={async () => {
                                                     triggerRefresh();
@@ -119,6 +119,9 @@ export const ListingCard = ({ listing, key, tags, isModifiable, triggerRefresh,
                             <div className="flex flex-col items-start">
                                 <div className="text-left gap-4 flex justify-between items-start w-full h-10">
                                     <h3 className="w-full overflow-x-hidden font-semibold text-md md:text-lg break-words whitespace-normal"> {listing.name} </h3>
+                                    {isModifiable && listing.is_active === false && (
+                                        <span className="rounded-full bg-primary/80 px-2 py-1 text-xs font-semibold text-primary-foreground">Inactive</span>
+                                    )}
                                     <div className="flex flex-row gap-2">
                                         {isSelectable && (isSelected ? <UnselectButton /> : <SelectButton />)}
                                         {isModifiable && <EditListingButton listing={listing} onEdited={() => setIsEditing(true)} />}

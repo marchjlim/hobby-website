@@ -62,7 +62,8 @@ export const ListingsSection = ({ refreshFlag, triggerRefresh }) => {
         fetchListings();
     }, [refreshFlag]);
 
-    const filteredListings = listings.filter((listing) => activeTag === "all" || listing.tags.includes(activeTag));
+    const visibleListings = isAdminPage ? listings : listings.filter((listing) => listing.is_active === true);
+    const filteredListings = visibleListings.filter((listing) => activeTag === "all" || listing.tags.includes(activeTag));
     
 
     return <section id="listings" className="py-24 px-4 relative bg-secondary/30">

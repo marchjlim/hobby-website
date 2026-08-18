@@ -20,6 +20,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
         listingArrival: listing.arrival_date,
         listingCarousellPrice: listing.carousell_price,
         listingIsRestocking: listing.is_restocking,
+        listingIsActive: listing.is_active ?? true,
         listingTelegramLink: listing.telegram_link,
     });
 
@@ -48,6 +49,7 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
             deposit: formData.listingDeposit === null ? null : Number(formData.listingDeposit),
             arrival_date: formData.listingArrival,
             is_restocking: formData.listingIsRestocking,
+            is_active: formData.listingIsActive,
             carousell_price: formData.listingCarousellPrice === null ? null : Number(formData.listingCarousellPrice),
             telegram_link: formData.listingTelegramLink,
             tags: allTags.map(tag => tag.text),
@@ -215,6 +217,18 @@ export const EditListingForm = ({ listing, initialListingTags, onListingEdited, 
                     </div>
                 </div>
                 
+                <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={formData.listingIsActive}
+                        onChange={(event) => setFormData((prev) => ({
+                            ...prev,
+                            listingIsActive: event.target.checked,
+                        }))}
+                        className="h-4 w-4 accent-primary"
+                    />
+                    <span className="text-sm font-medium">Active listing</span>
+                </label>
                 <RestockingCheckbox />
                 <PreorderCheckbox />
                 {formData.listingIsPreorder && <input
