@@ -16,9 +16,18 @@ from services.gemini import request_gemini
 logger = logging.getLogger(__name__)
 MAX_PREDICTION_IMAGE_BYTES = 4 * 1024 * 1024
 ALLOWED_PREDICTION_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-MAX_TAG_SUGGESTIONS = 5
+MAX_TAG_SUGGESTIONS = 7
 MAX_COMPARABLE_LISTINGS = 15
 MIN_COMPARABLE_PRICES = 2
+
+# DB fields
+PRODUCT_FIELDS = (
+    "id,canonical_name,grade,scale,msrp,msrp_currency,"
+    "original_release_date,last_reproduction_date"
+)
+TAGGED_FIELDS = (
+    "ListingId,TagName"
+)
 
 TAG_WEIGHTS = {
     "hg": 3,
@@ -71,7 +80,7 @@ class PricingAnalysis(BaseModel):
 
 def build_prompt(allowed_tags: list[str]) -> str:
     rules = [
-        "- Grade tags such as HG, RG, MG, or PG refer to the product grade printed on the box. Select at most one grade.",
+        "- Grade tags such as HG, RG, MG, MGEX, or PG refer to the product grade printed on the box. Select at most one grade.",
         "- 'Clear Color' applies only when the product or packaging explicitly indicates a transparent/clear-color edition.",
         "- 'Gundam Base Limited' applies only when the packaging indicates it.",
         "- 'Event limited' applies when the box contains 'Limited Item'",
@@ -80,8 +89,10 @@ def build_prompt(allowed_tags: list[str]) -> str:
     ]
     instructions = (
         "Suggest a listing name formatted as grade, scale, then product name. "
-        "Include visible edition text. Write a concise 2-3 sentence sales description "
-        "based on visible product facts; do not claim condition, completeness, or authenticity. "
+        "Include visible edition text. Write a concise 1-2 sentence description only "
+        "about the model itself and its source series when identifiable from the packaging. "
+        "Do not explain grades, scales, or model-kit terminology, and do not include generic "
+        "marketing filler or claims about condition, completeness, or authenticity. "
         f"Suggest up to {MAX_TAG_SUGGESTIONS} tags for this Gundam box image. "
         "Use only exact tags from this allowed list: "
         + json.dumps(allowed_tags)
@@ -98,22 +109,22 @@ def tag_weight(tag: str) -> int:
     return TAG_WEIGHTS.get(tag.casefold(), 1)
 
 
-def rank_price_comparables(
-    listings: list[dict],
-    relationships: list[dict],
-    requested_tags: list[str],
-) -> list[dict]:
-    canonical_tags = {tag.casefold(): tag for tag in requested_tags}
-    matches_by_listing = defaultdict(set)
+def rank_price_comparables(listings: list[dict], 
+                           relationships: list[dict],
+                           requested_tags: list[str]) -> list[dict]:
+    requested_tag_set = set(requested_tags)
+    matches_by_listing = defaultdict(set) # maps listingId to tags
     for relationship in relationships:
-        tag = canonical_tags.get(str(relationship["TagName"]).casefold())
-        if tag and tag_weight(tag) > 0:
-            matches_by_listing[relationship["ListingId"]].add(tag)
+        tag = relationship["TagName"]
+        id = relationship["ListingId"]
+        if tag in requested_tag_set and tag_weight(tag) > 0:
+            matches_by_listing[id].add(tag)
 
     ranked = []
     for listing in listings:
         matched_tags = matches_by_listing.get(listing["id"], set())
         if not matched_tags:
+            # no tags match for this listing
             continue
         ranked.append({
             "id": listing["id"],
@@ -143,12 +154,12 @@ def get_price_comparables(client: Client, tags: list[str]) -> list[dict]:
     try:
         relationships = (
             client.table("Tagged")
-            .select("ListingId,TagName")
+            .select(TAGGED_FIELDS)
             .in_("TagName", tags)
             .execute()
             .data
         )
-        listing_ids = sorted({row["ListingId"] for row in relationships})
+        listing_ids = sorted(set(row["ListingId"] for row in relationships))
         if not listing_ids:
             return []
         listings = (
@@ -180,14 +191,11 @@ def best_product_match(name: str, candidates: list[dict]) -> dict | None:
 
 
 def get_product_metadata(client: Client, name: str) -> dict | None:
-    fields = (
-        "id,canonical_name,grade,scale,msrp,msrp_currency,"
-        "original_release_date,last_reproduction_date"
-    )
+
     try:
         exact = (
             client.table("products")
-            .select(fields)
+            .select(PRODUCT_FIELDS)
             .ilike("canonical_name", name)
             .limit(1)
             .execute()
@@ -195,7 +203,7 @@ def get_product_metadata(client: Client, name: str) -> dict | None:
         if exact.data:
             return exact.data[0]
 
-        grade_match = re.search(r"\b(HG|RG|MG|PG|RE/100)\b", name, re.IGNORECASE)
+        grade_match = re.search(r"\b(HG|RG|MGEX|MG|PG|RE/100)\b", name, re.IGNORECASE)
         scale_match = re.search(r"\b1/(?:60|100|144)\b", name)
         ignored = {
             "hg", "rg", "mg", "pg", "re", "100", "1", "60", "144",
@@ -212,7 +220,7 @@ def get_product_metadata(client: Client, name: str) -> dict | None:
 
         candidates = {}
         for word in distinctive[:3]:
-            query = client.table("products").select(fields)
+            query = client.table("products").select(PRODUCT_FIELDS)
             if grade_match:
                 query = query.eq("grade", grade_match.group().upper())
             if scale_match:
@@ -240,10 +248,8 @@ def median_price(comparables: list[dict], field: str) -> float | None:
     return round(float(median(prices)), 2)
 
 
-def calculate_pricing(
-    comparables: list[dict],
-    product_metadata: dict | None = None,
-) -> dict:
+def calculate_pricing(comparables: list[dict], 
+                      product_metadata: dict | None = None) -> dict:
     suggested_price = median_price(comparables, "price")
     suggested_carousell_price = median_price(comparables, "carousell_price")
     website_count = sum(item.get("price") is not None for item in comparables)
@@ -373,12 +379,9 @@ def record_pricing_suggestion(
         return None
 
 
-def generate_pricing(
-    client: Client,
-    product: dict,
-    listing_name: str,
-    tags: list[str],
-) -> dict:
+def generate_pricing(client: Client, product: dict, 
+                     listing_name: str, tags: list[str]) -> dict:
+    # do not use product metadata if msrp is not available in the db
     product_metadata = product if product.get("msrp") is not None else None
     pricing = calculate_pricing(get_price_comparables(client, tags), product_metadata)
     if pricing["pricing_comparables"]:
@@ -463,20 +466,13 @@ def generate_listing_details(image: UploadFile, client: Client) -> dict:
     return result
 
 
-def generate_product_pricing(
-    client: Client,
-    product_id: int,
-    listing_name: str,
-    tags: list[str],
-) -> dict:
+def generate_product_pricing(client: Client, product_id: int, 
+                             listing_name: str, tags: list[str]) -> dict:
     product_response = (
         client.table("products")
-        .select(
-            "id,canonical_name,grade,scale,msrp,msrp_currency,"
-            "original_release_date,last_reproduction_date"
-        )
+        .select(PRODUCT_FIELDS)
         .eq("id", product_id)
-        .maybe_single()
+        .maybe_single() # tells supabase that the query should return 0 or 1 row, rather than a list of rows
         .execute()
     )
     if not product_response.data:

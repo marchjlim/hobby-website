@@ -60,7 +60,7 @@ def key(value):
 
 
 def parts(canonical_name):
-    match = re.match(r"^(HG|MG|RG|PG)\s+(\S+)\s+(.+)$", canonical_name)
+    match = re.match(r"^(HG|MGEX|MG|RG|PG)\s+(\S+)\s+(.+)$", canonical_name)
     assert match, canonical_name
     return match.groups()
 
@@ -388,7 +388,7 @@ def main():
 
     names = [row["canonical_name"] for row in rows]
     assert len(names) == len(set(names)), "duplicate canonical_name"
-    assert all(row["grade"] in {"HG", "MG", "RG", "PG"} for row in rows)
+    assert all(row["grade"] in {"HG", "MG", "MGEX", "RG", "PG"} for row in rows)
     assert all(not row["msrp"] or re.fullmatch(r"\d+(?:\.\d+)?", row["msrp"]) for row in rows)
     assert all(not row[field] or re.fullmatch(r"\d{4}-\d{2}-\d{2}", row[field])
                for row in rows for field in ("original_release_date", "last_reproduction_date"))

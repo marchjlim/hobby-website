@@ -94,7 +94,8 @@ class ListingSuggestionTest(unittest.TestCase):
     def test_builds_extraction_prompt(self):
         prompt = build_prompt(["RG"])
 
-        self.assertIn("sales description", prompt)
+        self.assertIn("only about the model itself", prompt)
+        self.assertIn("Do not explain grades", prompt)
         self.assertIn('["RG"]', prompt)
         self.assertNotIn("prices in SGD", prompt)
 

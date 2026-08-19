@@ -4,7 +4,7 @@ from models.listing import (
     ListingUpdate,
     ListingUpdateRequest,
 )
-from models.relationships import AttachTagToListingsRequest, ListingTag
+from models.relationships import AttachTagToListingsRequest, TaggedRelationship
 from models.tag import Tag
 from models.user import User
 
@@ -14,7 +14,7 @@ __all__ = [
     "ListingUpdate",
     "Listing",
     "Tag",
-    "ListingTag",
+    "TaggedRelationship",
     "AttachTagToListingsRequest",
     "User",
 ]
