@@ -1,20 +1,81 @@
+import os
 import unittest
+from unittest.mock import patch
+
+import httpx
 
 from routers.ai import (
     ListingDetailsSuggestion,
     PricingAnalysis,
     SuggestedTag,
     apply_pricing_analysis,
+    best_product_match,
     build_prompt,
     build_pricing_prompt,
     calculate_pricing,
     keep_allowed_tag_suggestions,
     parse_gemini_response,
     rank_price_comparables,
+    request_gemini,
 )
 
 
 class ListingSuggestionTest(unittest.TestCase):
+    def test_retries_gemini_503(self):
+        request = httpx.Request("POST", "https://example.test")
+        overloaded = httpx.Response(503, request=request, text="overloaded")
+        success = httpx.Response(
+            200,
+            request=request,
+            json={"candidates": [{"content": {"parts": [{"text": (
+                '{"name":"RG 1/144 Nu Gundam",'
+                '"description":"A Real Grade model kit.",'
+                '"tag_suggestions":[]}'
+            )}]}}]},
+        )
+
+        with (
+            patch.dict(os.environ, {"GEMINI_API_KEY": "test"}),
+            patch("routers.ai.httpx.post", side_effect=[overloaded, success]) as post,
+            patch("routers.ai.time.sleep") as sleep,
+        ):
+            result = request_gemini("prompt", ListingDetailsSuggestion, attempts=5)
+
+        self.assertEqual(result.name, "RG 1/144 Nu Gundam")
+        self.assertEqual(post.call_count, 2)
+        sleep.assert_called_once_with(0.5)
+    def test_retries_gemini_connection_failure(self):
+        request = httpx.Request("POST", "https://example.test")
+        success = httpx.Response(
+            200,
+            request=request,
+            json={"candidates": [{"content": {"parts": [{"text": (
+                '{"name":"MG 1/100 Zaku II",'
+                '"description":"A Master Grade model kit.",'
+                '"tag_suggestions":[]}'
+            )}]}}]},
+        )
+
+        with (
+            patch.dict(os.environ, {"GEMINI_API_KEY": "test"}),
+            patch("routers.ai.httpx.post", side_effect=[
+                httpx.ConnectError("offline", request=request), success
+            ]) as post,
+            patch("routers.ai.time.sleep") as sleep,
+        ):
+            result = request_gemini("prompt", ListingDetailsSuggestion, attempts=5)
+
+        self.assertEqual(result.name, "MG 1/100 Zaku II")
+        self.assertEqual(post.call_count, 2)
+        sleep.assert_called_once_with(0.5)
+
+    def test_selects_closest_product_name(self):
+        match = best_product_match("MG 1/100 Zaku II Ver 2.0", [
+            {"id": 1, "canonical_name": "MG 1/100 GUNDAM MK-II"},
+            {"id": 2, "canonical_name": "MG 1/100 MS-06J ZAKU II VER.2.0"},
+        ])
+
+        self.assertEqual(match["id"], 2)
     def test_filters_normalizes_deduplicates_and_sorts_tags(self):
         result = keep_allowed_tag_suggestions(
             [

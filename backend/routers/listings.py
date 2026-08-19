@@ -173,6 +173,17 @@ async def create_listing(
         raise HTTPException(status_code=422, detail=json.loads(exc.json())) from exc
 
     try:
+        if request.product_id is not None:
+            product = (
+                authenticated_supabase.table("products")
+                .select("id")
+                .eq("id", request.product_id)
+                .maybe_single()
+                .execute()
+            )
+            if not product.data:
+                raise HTTPException(status_code=422, detail="Selected product does not exist")
+
         image_url = request.image_url
         if image:
             image_url = await upload_listing_image(image, authenticated_supabase)

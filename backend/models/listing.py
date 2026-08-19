@@ -7,6 +7,7 @@ from models.base import SupabaseModel
 
 class Listing(SupabaseModel):
     id: int | None = None
+    product_id: int | None = None
     name: str
     image_url: str | None = None
     description: str | None = None
@@ -40,6 +41,7 @@ class ListingUpdate(SupabaseModel):
 
 
 class ListingCreationRequest(BaseModel):
+    product_id: int | None = Field(default=None, ge=1)
     name: str = Field(min_length=1)
     image_url: str | None = None
     price: float = Field(ge=0)
@@ -58,6 +60,7 @@ class ListingCreationRequest(BaseModel):
     def to_listing(self, *, image_url: str | None = None) -> Listing:
         """Convert API creation data into a Listings table model."""
         return Listing(
+            product_id=self.product_id,
             name=self.name,
             image_url=image_url if image_url is not None else self.image_url,
             price=self.price,

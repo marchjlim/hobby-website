@@ -23,8 +23,8 @@ def get_products(
             .select("*", count="exact")
             .order("canonical_name")
         )
-        if q := q.strip():
-            query = query.ilike("canonical_name", f"%{q}%")
+        for word in q.split():
+            query = query.ilike("canonical_name", f"%{word}%")
         response = query.range(start, start + PAGE_SIZE - 1).execute()
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Unable to fetch products") from exc

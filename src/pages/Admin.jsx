@@ -11,7 +11,6 @@ import { TagManagementSection } from "../components/listings/TagManagementSectio
 import { TagForm } from "../components/listings/TagForm";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { LogoutButton } from "../components/LogoutButton";
-import { ProductsSection } from "../components/products/ProductsSection";
 
 export const Admin = () => {
     const [refreshFlag, setRefreshFlag] = useState(false);
@@ -107,7 +106,6 @@ export const Admin = () => {
 
                                 {/* Main Content */}
                                     <main>
-                                        <ProductsSection />
                                         <ListingsSection refreshFlag={refreshFlag} triggerRefresh={triggerRefresh} />
                                         <ListingForm onListingCreated={triggerRefresh} />
                                         <TagManagementSection refreshFlag={refreshFlag} onTagUpdate={triggerRefresh} />

@@ -24,8 +24,17 @@ export const ListingForm = ({ onListingCreated }) => {
     const [allTags, setAllTags] = useState([]);
     const [listingImage, setListingImage] = useState(null);
     const [isGeneratingDetails, setIsGeneratingDetails] = useState(false);
+    const [isGeneratingPricing, setIsGeneratingPricing] = useState(false);
     const [generationError, setGenerationError] = useState("");
     const [pricingRationale, setPricingRationale] = useState("");
+    const [pricingError, setPricingError] = useState("");
+    const [suggestedProductName, setSuggestedProductName] = useState("");
+    const [matchedProductName, setMatchedProductName] = useState("");
+    const [matchedProductId, setMatchedProductId] = useState(null);
+    const [productSearch, setProductSearch] = useState("");
+    const [productOptions, setProductOptions] = useState([]);
+    const [productSearchError, setProductSearchError] = useState("");
+    const [isSearchingProducts, setIsSearchingProducts] = useState(false);
     const [pricingSuggestionId, setPricingSuggestionId] = useState(null);
 
     const { toast } = useToast();
@@ -54,6 +63,13 @@ export const ListingForm = ({ onListingCreated }) => {
         setListingImage(event.target.files?.[0] ?? null);
         setGenerationError("");
         setPricingRationale("");
+        setPricingError("");
+        setSuggestedProductName("");
+        setMatchedProductName("");
+        setMatchedProductId(null);
+        setProductSearch("");
+        setProductOptions([]);
+        setProductSearchError("");
         setPricingSuggestionId(null);
     };
 
@@ -64,6 +80,15 @@ export const ListingForm = ({ onListingCreated }) => {
         body.append("image", listingImage);
         setIsGeneratingDetails(true);
         setGenerationError("");
+        setPricingRationale("");
+        setPricingError("");
+        setPricingSuggestionId(null);
+        setSuggestedProductName("");
+        setMatchedProductName("");
+        setMatchedProductId(null);
+        setProductSearch("");
+        setProductOptions([]);
+        setProductSearchError("");
         try {
             const endpoint = "/api/ai/suggest-listing-details";
             const response = await authenticatedFetch(endpoint, {
@@ -77,9 +102,14 @@ export const ListingForm = ({ onListingCreated }) => {
                 ...current,
                 listingName: current.listingName || payload.name || "",
                 listingDescription: current.listingDescription || payload.description || "",
-                listingPrice: current.listingPrice ?? payload.suggested_price ?? null,
-                carousellPrice: current.carousellPrice ?? payload.suggested_carousell_price ?? null,
+                listingPrice: payload.suggested_price ?? current.listingPrice,
+                carousellPrice: payload.suggested_carousell_price ?? current.carousellPrice,
             }));
+            const suggestedProduct = payload.suggested_product_name ?? "";
+            setSuggestedProductName(suggestedProduct);
+            setMatchedProductName(suggestedProduct);
+            setMatchedProductId(payload.suggested_product_id ?? null);
+            setProductSearch(suggestedProduct || payload.name || "");
             setPricingRationale(payload.pricing_rationale ?? "");
             setPricingSuggestionId(payload.pricing_suggestion_id ?? null);
             setTags((current) => {
@@ -97,10 +127,60 @@ export const ListingForm = ({ onListingCreated }) => {
         }
     };
 
+    const searchProducts = async () => {
+        const query = productSearch.trim();
+        if (!query) return;
+
+        setIsSearchingProducts(true);
+        setProductSearchError("");
+        try {
+            const response = await authenticatedFetch(`/api/products?q=${encodeURIComponent(query)}`);
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail ?? "Unable to search products");
+            setProductOptions(payload.results ?? []);
+            if (!payload.results?.length) setProductSearchError("No matching products found.");
+        } catch (error) {
+            setProductSearchError(error.message);
+        } finally {
+            setIsSearchingProducts(false);
+        }
+    };
+    const generatePricing = async () => {
+        if (!matchedProductId) return;
+
+        setIsGeneratingPricing(true);
+        setPricingError("");
+        try {
+            const response = await authenticatedFetch("/api/ai/suggest-listing-pricing", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    product_id: matchedProductId,
+                    listing_name: formData.listingName,
+                    tags: tags.map((tag) => tag.text),
+                }),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail ?? "Unable to generate pricing");
+
+            setFormData((current) => ({
+                ...current,
+                listingPrice: payload.suggested_price ?? current.listingPrice,
+                carousellPrice: payload.suggested_carousell_price ?? current.carousellPrice,
+            }));
+            setPricingRationale(payload.pricing_rationale ?? "");
+            setPricingSuggestionId(payload.pricing_suggestion_id ?? null);
+        } catch (error) {
+            setPricingError(`${error.message}. Try again.`);
+        } finally {
+            setIsGeneratingPricing(false);
+        }
+    };
     const handleSubmit = async (event) => {
         event.preventDefault();
         const requestBody = new FormData();
         requestBody.append("payload", JSON.stringify({
+            product_id: matchedProductId,
             name: formData.listingName,
             price: Number(formData.listingPrice),
             description: formData.listingDescription,
@@ -149,6 +229,13 @@ export const ListingForm = ({ onListingCreated }) => {
         setListingImage(null);
 
         setPricingRationale("");
+        setPricingError("");
+        setSuggestedProductName("");
+        setMatchedProductName("");
+        setMatchedProductId(null);
+        setProductSearch("");
+        setProductOptions([]);
+        setProductSearchError("");
         setPricingSuggestionId(null);
         await fetchAllTags();
         await onListingCreated();
@@ -161,10 +248,17 @@ export const ListingForm = ({ onListingCreated }) => {
 
     const [tags, setTags] = useState([]);
 
+    const invalidatePricing = () => {
+        setPricingRationale("");
+        setPricingSuggestionId(null);
+        setPricingError("");
+    };
+
     const addTag = (tag) => {
         // do not allow adding duplicate if tags already selected.
         if (!tags.some(t => t.text.toLowerCase() === tag.text.toLowerCase())) {
             setTags([...tags, tag]);
+            invalidatePricing();
         } else {
             // duplicate tag
             setTimeout(() => {
@@ -178,10 +272,12 @@ export const ListingForm = ({ onListingCreated }) => {
 
     const deleteTag = (idx) => {
         setTags(tags.filter((tag, index) => idx !== index));
+        invalidatePricing();
     }
 
     const deleteAllTags = () => {
         setTags([]);
+        invalidatePricing();
     }
 
     const PreorderCheckbox = () => {
@@ -297,6 +393,77 @@ export const ListingForm = ({ onListingCreated }) => {
                 
 
                 {pricingRationale && <p className="text-sm text-muted-foreground">{pricingRationale}</p>}
+                <div className="space-y-2 rounded-md bg-primary/10 p-3 text-sm">
+                        <p>
+                            Backend suggestion: <span className="font-semibold">{suggestedProductName || "None yet"}</span>
+                        </p>
+                        <p>
+                            Selected product: <span className="font-semibold">{matchedProductName || "None"}</span>
+                        </p>
+                        <div className="flex gap-2">
+                            <input
+                                type="search"
+                                value={productSearch}
+                                onChange={(event) => setProductSearch(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        searchProducts();
+                                    }
+                                }}
+                                placeholder="Search canonical product name"
+                                maxLength={100}
+                                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                            />
+                            <button type="button" className="cosmic-button" disabled={isSearchingProducts} onClick={searchProducts}>
+                                {isSearchingProducts ? "Searching..." : "Search"}
+                            </button>
+                        </div>
+                        {productOptions.length > 0 && (
+                            <select
+                                value={matchedProductId ?? ""}
+                                onChange={(event) => {
+                                    const product = productOptions.find((option) => String(option.id) === event.target.value);
+                                    setMatchedProductId(product?.id ?? null);
+                                    setMatchedProductName(product?.canonical_name ?? "");
+                                    setPricingRationale("");
+                                    setPricingSuggestionId(null);
+                                    setPricingError("");
+                                }}
+                                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                            >
+                                <option value="">Choose a product</option>
+                                {productOptions.map((product) => (
+                                    <option key={product.id} value={product.id}>{product.canonical_name}</option>
+                                ))}
+                            </select>
+                        )}
+                        {matchedProductId && (
+                            <button
+                                type="button"
+                                className="text-red-500 hover:underline"
+                                onClick={() => {
+                                    setMatchedProductId(null);
+                                    setMatchedProductName("");
+                                    setPricingRationale("");
+                                    setPricingSuggestionId(null);
+                                    setPricingError("");
+                                }}
+                            >
+                                Clear product match
+                            </button>
+                        )}
+                        {productSearchError && <p className="text-red-500">{productSearchError}</p>}
+                        <button
+                            type="button"
+                            className="cosmic-button disabled:opacity-50"
+                            disabled={!matchedProductId || !formData.listingName.trim() || isGeneratingPricing}
+                            onClick={generatePricing}
+                        >
+                            {isGeneratingPricing ? "Generating pricing..." : "Generate pricing"}
+                        </button>
+                        {pricingError && <p className="text-red-500">{pricingError}</p>}
+                </div>
                 <label className="flex items-center gap-2">
                     <input
                         type="checkbox"

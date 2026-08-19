@@ -1,9 +1,12 @@
 import base64
 from collections import defaultdict
+from difflib import SequenceMatcher
 import json
 import logging
 import os
+import re
 from statistics import median
+import time
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -70,6 +73,14 @@ class PricingAnalysis(BaseModel):
     suggested_price: float | None = Field(default=None, ge=0)
     suggested_carousell_price: float | None = Field(default=None, ge=0)
     rationale: str = Field(max_length=500)
+
+
+class PricingSuggestionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    product_id: int = Field(ge=1)
+    listing_name: str = Field(min_length=1)
+    tags: list[str] = Field(default_factory=list, max_length=50)
 
 
 def build_prompt(allowed_tags: list[str]) -> str:
@@ -148,13 +159,13 @@ def rank_price_comparables(
     )[:MAX_COMPARABLE_LISTINGS]
 
 
-def get_price_comparables(tags: list[str]) -> list[dict]:
+def get_price_comparables(client: Client, tags: list[str]) -> list[dict]:
     if not tags:
         return []
 
     try:
         relationships = (
-            supabase.table("Tagged")
+            client.table("Tagged")
             .select("ListingId,TagName")
             .in_("TagName", tags)
             .execute()
@@ -164,7 +175,7 @@ def get_price_comparables(tags: list[str]) -> list[dict]:
         if not listing_ids:
             return []
         listings = (
-            supabase.table("Listings")
+            client.table("Listings")
             .select("id,name,price,carousell_price,created_at")
             .in_("id", listing_ids)
             .execute()
@@ -176,23 +187,70 @@ def get_price_comparables(tags: list[str]) -> list[dict]:
         return []
 
 
-def get_product_metadata(name: str) -> dict | None:
+def normalize_product_name(name: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", name.casefold()))
+
+
+def best_product_match(name: str, candidates: list[dict]) -> dict | None:
+    normalized = normalize_product_name(name)
+    return max(
+        candidates,
+        key=lambda product: SequenceMatcher(
+            None, normalized, normalize_product_name(product["canonical_name"])
+        ).ratio(),
+        default=None,
+    )
+
+
+def get_product_metadata(client: Client, name: str) -> dict | None:
+    fields = (
+        "id,canonical_name,grade,scale,msrp,msrp_currency,"
+        "original_release_date,last_reproduction_date"
+    )
     try:
-        response = (
-            supabase.table("products")
-            .select(
-                "id,canonical_name,grade,scale,msrp,msrp_currency,"
-                "original_release_date,last_reproduction_date"
-            )
+        exact = (
+            client.table("products")
+            .select(fields)
             .ilike("canonical_name", name)
             .limit(1)
             .execute()
         )
-        return response.data[0] if response.data else None
+        if exact.data:
+            return exact.data[0]
+
+        grade_match = re.search(r"\b(HG|RG|MG|PG|RE/100)\b", name, re.IGNORECASE)
+        scale_match = re.search(r"\b1/(?:60|100|144)\b", name)
+        ignored = {
+            "hg", "rg", "mg", "pg", "re", "100", "1", "60", "144",
+            "gundam", "model", "kit", "the", "ver", "version", "limited",
+        }
+        distinctive = sorted(
+            (word for word in normalize_product_name(name).split()
+             if word not in ignored and len(word) > 2),
+            key=len,
+            reverse=True,
+        )
+        if not distinctive:
+            return None
+
+        candidates = {}
+        for word in distinctive[:3]:
+            query = client.table("products").select(fields)
+            if grade_match:
+                query = query.eq("grade", grade_match.group().upper())
+            if scale_match:
+                query = query.eq("scale", scale_match.group())
+            for product in (
+                query.ilike("canonical_name", f"%{word}%")
+                .limit(100)
+                .execute()
+                .data
+            ):
+                candidates[product["id"]] = product
+        return best_product_match(name, list(candidates.values()))
     except Exception:
         logger.info("Product catalogue is unavailable or has no migration", exc_info=True)
         return None
-
 
 def median_price(comparables: list[dict], field: str) -> float | None:
     prices = [
@@ -313,7 +371,7 @@ def record_pricing_suggestion(
     client: Client,
     tags: list[str],
     pricing: dict,
-    product_metadata: dict | None,
+    product_id: int | None,
 ) -> str | None:
     try:
         response = (
@@ -325,7 +383,7 @@ def record_pricing_suggestion(
                 "comparable_listing_ids": [
                     item["id"] for item in pricing["pricing_comparables"]
                 ],
-                "product_id": product_metadata["id"] if product_metadata else None,
+                "product_id": product_id,
             })
             .execute()
         )
@@ -336,6 +394,33 @@ def record_pricing_suggestion(
             exc_info=True,
         )
         return None
+
+
+def generate_pricing(
+    client: Client,
+    product: dict,
+    listing_name: str,
+    tags: list[str],
+) -> dict:
+    product_metadata = product if product.get("msrp") is not None else None
+    pricing = calculate_pricing(get_price_comparables(client, tags), product_metadata)
+    if pricing["pricing_comparables"]:
+        try:
+            analysis = request_gemini(
+                build_pricing_prompt(listing_name, tags, pricing),
+                PricingAnalysis,
+                attempts=5,
+            )
+            pricing = apply_pricing_analysis(pricing, analysis)
+        except HTTPException:
+            logger.warning("Gemini pricing analysis failed; using baseline pricing")
+
+    return {
+        "pricing_suggestion_id": record_pricing_suggestion(
+            client, tags, pricing, product["id"]
+        ),
+        **pricing,
+    }
 
 
 def keep_allowed_tag_suggestions(
@@ -374,61 +459,67 @@ def request_gemini(
     schema: type[BaseModel],
     content: bytes | None = None,
     content_type: str | None = None,
+    attempts: int = 1,
 ) -> BaseModel:
     if not os.getenv("GEMINI_API_KEY"):
         raise HTTPException(status_code=503, detail="AI listing generation is not configured")
 
     model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-    try:
-        response = httpx.post(
-            (
-                "https://generativelanguage.googleapis.com/v1beta/models/"
-                f"{model}:generateContent"
-            ),
-            headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
-            json={
-                "contents": [{
-                    "parts": ([{
-                        "inline_data": {
-                            "mime_type": content_type,
-                            "data": base64.b64encode(content).decode("ascii"),
+    for attempt in range(attempts):
+        try:
+            response = httpx.post(
+                (
+                    "https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{model}:generateContent"
+                ),
+                headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
+                json={
+                    "contents": [{
+                        "parts": ([{
+                            "inline_data": {
+                                "mime_type": content_type,
+                                "data": base64.b64encode(content).decode("ascii"),
+                            }
+                        }] if content is not None else []) + [{"text": prompt}],
+                    }],
+                    "generationConfig": {
+                        "responseFormat": {
+                            "text": {
+                                "mimeType": "APPLICATION_JSON",
+                                "schema": schema.model_json_schema(),
+                            }
                         }
-                    }] if content is not None else []) + [{"text": prompt}],
-                }],
-                "generationConfig": {
-                    "responseFormat": {
-                        "text": {
-                            "mimeType": "APPLICATION_JSON",
-                            "schema": schema.model_json_schema(),
-                        }
-                    }
+                    },
                 },
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        parsed = parse_gemini_response(response.json(), schema)
-    except httpx.HTTPStatusError as exc:
-        logger.error(
-            "Gemini returned HTTP %s: %s",
-            exc.response.status_code,
-            exc.response.text,
-        )
-        raise HTTPException(
-            status_code=(
-                exc.response.status_code if exc.response.status_code in {429, 503} else 502
-            ),
-            detail=f"Gemini returned HTTP {exc.response.status_code}",
-        ) from exc
-    except httpx.RequestError as exc:
-        logger.exception("Unable to reach Gemini")
-        raise HTTPException(status_code=502, detail="Unable to reach Gemini") from exc
-    except (KeyError, StopIteration, ValueError) as exc:
-        logger.exception("Unable to parse Gemini response")
-        raise HTTPException(status_code=502, detail="Invalid response from Gemini") from exc
+                timeout=30,
+            )
+            response.raise_for_status()
+            return parse_gemini_response(response.json(), schema)
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            logger.error("Gemini returned HTTP %s: %s", status, exc.response.text)
+            if status == 503 and attempt < attempts - 1:
+                delay = 0.5 * 2 ** attempt
+                logger.warning("Gemini overloaded; retrying in %.1f seconds", delay)
+                time.sleep(delay)
+                continue
+            raise HTTPException(
+                status_code=status if status in {429, 503} else 502,
+                detail=f"Gemini returned HTTP {status}",
+            ) from exc
+        except httpx.RequestError as exc:
+            if attempt < attempts - 1:
+                delay = 0.5 * 2 ** attempt
+                logger.warning("Unable to reach Gemini; retrying in %.1f seconds", delay)
+                time.sleep(delay)
+                continue
+            logger.exception("Unable to reach Gemini")
+            raise HTTPException(status_code=502, detail="Unable to reach Gemini") from exc
+        except (KeyError, StopIteration, ValueError) as exc:
+            logger.exception("Unable to parse Gemini response")
+            raise HTTPException(status_code=502, detail="Invalid response from Gemini") from exc
 
-    return parsed
-
+    raise HTTPException(status_code=503, detail="Gemini is temporarily overloaded")
 
 @router.post("/suggest-listing-details")
 def suggest_listing_details(
@@ -442,35 +533,56 @@ def suggest_listing_details(
         ListingDetailsSuggestion,
         content,
         image.content_type,
+        attempts=5,
     )
     tag_suggestions = keep_allowed_tag_suggestions(
         parsed.tag_suggestions,
         allowed_tags,
     )
-    tag_names = [suggestion.tag for suggestion in tag_suggestions]
-    product_metadata = get_product_metadata(parsed.name)
-    pricing = calculate_pricing(get_price_comparables(tag_names), product_metadata)
-    if pricing["pricing_comparables"]:
-        try:
-            analysis = request_gemini(
-                build_pricing_prompt(parsed.name, tag_names, pricing),
-                PricingAnalysis,
-            )
-            pricing = apply_pricing_analysis(pricing, analysis)
-        except HTTPException:
-            logger.warning("Gemini pricing analysis failed; using baseline pricing")
-    pricing_suggestion_id = record_pricing_suggestion(
-        authenticated_supabase,
-        tag_names,
-        pricing,
-        product_metadata,
-    )
-    return {
+    suggested_product = get_product_metadata(authenticated_supabase, parsed.name)
+    tags = [suggestion.tag for suggestion in tag_suggestions]
+    result = {
         "name": parsed.name,
         "description": parsed.description,
+        "suggested_product_name": (
+            suggested_product["canonical_name"] if suggested_product else None
+        ),
+        "suggested_product_id": suggested_product["id"] if suggested_product else None,
         "tag_suggestions": [
             suggestion.model_dump() for suggestion in tag_suggestions
         ],
-        "pricing_suggestion_id": pricing_suggestion_id,
-        **pricing,
     }
+    if suggested_product:
+        result.update(generate_pricing(
+            authenticated_supabase,
+            suggested_product,
+            parsed.name,
+            tags,
+        ))
+    return result
+
+
+@router.post("/suggest-listing-pricing")
+def suggest_listing_pricing(
+    request: PricingSuggestionRequest,
+    authenticated_supabase: Client = Depends(require_admin),
+):
+    product_response = (
+        authenticated_supabase.table("products")
+        .select(
+            "id,canonical_name,grade,scale,msrp,msrp_currency,"
+            "original_release_date,last_reproduction_date"
+        )
+        .eq("id", request.product_id)
+        .maybe_single()
+        .execute()
+    )
+    if not product_response.data:
+        raise HTTPException(status_code=422, detail="Selected product does not exist")
+
+    return generate_pricing(
+        authenticated_supabase,
+        product_response.data,
+        request.listing_name,
+        request.tags,
+    )
