@@ -4,7 +4,8 @@ from unittest.mock import patch
 
 import httpx
 
-from routers.ai import (
+from services.gemini import parse_gemini_response, request_gemini
+from services.listing_generation import (
     ListingDetailsSuggestion,
     PricingAnalysis,
     SuggestedTag,
@@ -14,9 +15,7 @@ from routers.ai import (
     build_pricing_prompt,
     calculate_pricing,
     keep_allowed_tag_suggestions,
-    parse_gemini_response,
     rank_price_comparables,
-    request_gemini,
 )
 
 
@@ -36,14 +35,15 @@ class ListingSuggestionTest(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"GEMINI_API_KEY": "test"}),
-            patch("routers.ai.httpx.post", side_effect=[overloaded, success]) as post,
-            patch("routers.ai.time.sleep") as sleep,
+            patch("services.gemini.httpx.post", side_effect=[overloaded, success]) as post,
+            patch("services.gemini.time.sleep") as sleep,
         ):
             result = request_gemini("prompt", ListingDetailsSuggestion, attempts=5)
 
         self.assertEqual(result.name, "RG 1/144 Nu Gundam")
         self.assertEqual(post.call_count, 2)
         sleep.assert_called_once_with(0.5)
+
     def test_retries_gemini_connection_failure(self):
         request = httpx.Request("POST", "https://example.test")
         success = httpx.Response(
@@ -58,10 +58,10 @@ class ListingSuggestionTest(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"GEMINI_API_KEY": "test"}),
-            patch("routers.ai.httpx.post", side_effect=[
+            patch("services.gemini.httpx.post", side_effect=[
                 httpx.ConnectError("offline", request=request), success
             ]) as post,
-            patch("routers.ai.time.sleep") as sleep,
+            patch("services.gemini.time.sleep") as sleep,
         ):
             result = request_gemini("prompt", ListingDetailsSuggestion, attempts=5)
 
@@ -76,6 +76,7 @@ class ListingSuggestionTest(unittest.TestCase):
         ])
 
         self.assertEqual(match["id"], 2)
+
     def test_filters_normalizes_deduplicates_and_sorts_tags(self):
         result = keep_allowed_tag_suggestions(
             [
@@ -121,7 +122,6 @@ class ListingSuggestionTest(unittest.TestCase):
         self.assertEqual(result.name, "RG 1/144 Nu Gundam")
         self.assertEqual(result.description, "A Real Grade model kit.")
         self.assertEqual(result.tag_suggestions[0].tag, "RG")
-
 
     def test_ranks_comparables_by_weighted_tag_overlap(self):
         listings = [
@@ -196,7 +196,6 @@ class ListingSuggestionTest(unittest.TestCase):
 
         self.assertIsNone(pricing["suggested_price"])
         self.assertIsNone(pricing["suggested_carousell_price"])
-
 
     def test_uses_sgd_msrp_as_a_fallback(self):
         pricing = calculate_pricing(
