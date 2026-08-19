@@ -3,6 +3,7 @@ import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { Toaster } from '@/components/ui/toaster';
 import { Admin } from './pages/Admin';
+import { Products } from './pages/Products';
 
 function App() {
 
@@ -13,6 +14,7 @@ function App() {
       <Routes>
         <Route index element={<Home />} />
         <Route path="/secret-admin-page" element={<Admin />} />
+        <Route path="/products" element={<Products />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

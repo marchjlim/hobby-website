@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 from pathlib import Path
 from uuid import uuid4
@@ -11,7 +12,7 @@ from supabase import Client
 from auth import get_authenticated_supabase_client
 from models.listing import ListingCreationRequest, ListingUpdateRequest
 from models.tag import Tag, TagRenameRequest
-from models.relationships import AttachTagToListingsRequest, ListingTag
+from models.relationships import AttachTagToListingsRequest, TaggedRelationship
 
 from database import supabase
 
@@ -21,6 +22,7 @@ from database import supabase
 # tags param: for documentation. FastAPI automatically generates Swagger docs at /docs, the tags controls
 # how endpoints are grouped in those docs
 router = APIRouter(prefix="/api/listings", tags=["listings"])
+logger = logging.getLogger(__name__)
 
 async def upload_listing_image(
     image: UploadFile,
@@ -46,21 +48,21 @@ async def upload_listing_image(
     )
 
 
-def sync_listing_tags(
-    authenticated_supabase: Client,
-    listing_id: int,
-    tags: list[str],
-) -> None:
-    # insert tags and relationships
-    for tag_name in tags:
-        authenticated_supabase.table("ListingTag").upsert(
-            {"name": tag_name},
-            on_conflict="name",
-        ).execute()
-        authenticated_supabase.table("Tagged").upsert({
-            "TagName": tag_name,
-            "ListingId": listing_id,
-        }).execute()
+def sync_listing_tags(authenticated_supabase: Client,
+                      listing_id: int,
+                      tags: list[str]) -> None:
+    # assumes that tags is non empty, caller handles it
+    unique_tags = set(tags)
+    authenticated_supabase.table("ListingTag").upsert(
+        [{"name": tag_name} for tag_name in unique_tags],
+        on_conflict="name",
+    ).execute()
+    authenticated_supabase.table("Tagged").upsert(
+        [
+            {"TagName": tag_name, "ListingId": listing_id}
+            for tag_name in unique_tags
+        ]
+    ).execute()
 
     current_response = (
         authenticated_supabase.table("Tagged")
@@ -68,18 +70,21 @@ def sync_listing_tags(
         .eq("ListingId", listing_id)
         .execute()
     )
-    desired_lowercase_tags = set([tag_name.lower() for tag_name in tags])
-    for relationship in current_response.data:
-        current_tag = relationship["TagName"]
-        # remove stale relationships
-        if current_tag.lower() not in desired_lowercase_tags:
-            (
-                authenticated_supabase.table("Tagged")
-                .delete()
-                .eq("ListingId", listing_id)
-                .eq("TagName", current_tag)
-                .execute()
-            )
+    
+    stale_tags = [
+        relationship["TagName"]
+        for relationship in current_response.data
+        if relationship["TagName"] not in unique_tags
+    ]
+    if stale_tags:
+        (
+            authenticated_supabase.table("Tagged")
+            .delete()
+            .eq("ListingId", listing_id)
+            .in_("TagName", stale_tags)
+            .execute()
+        )
+
 
 @router.get("/tags")
 def get_all_tags():
@@ -171,6 +176,17 @@ async def create_listing(
         raise HTTPException(status_code=422, detail=json.loads(exc.json())) from exc
 
     try:
+        if request.product_id is not None:
+            product = (
+                authenticated_supabase.table("products")
+                .select("id")
+                .eq("id", request.product_id)
+                .maybe_single()
+                .execute()
+            )
+            if not product.data:
+                raise HTTPException(status_code=422, detail="Selected product does not exist")
+
         image_url = request.image_url
         if image:
             image_url = await upload_listing_image(image, authenticated_supabase)
@@ -185,7 +201,25 @@ async def create_listing(
         if not response.data:
             raise HTTPException(status_code=502, detail="Supabase did not return the listing")
         created_listing = response.data[0]
-        sync_listing_tags(authenticated_supabase, created_listing["id"], request.tags)
+        if request.tags:
+            sync_listing_tags(authenticated_supabase, created_listing["id"], request.tags)
+        if request.pricing_suggestion_id:
+            try:
+                (
+                    authenticated_supabase.table("AiPricingSuggestions")
+                    .update({
+                        "accepted_listing_id": created_listing["id"],
+                        "accepted_price": created_listing["price"],
+                        "accepted_carousell_price": created_listing.get("carousell_price"),
+                    })
+                    .eq("id", request.pricing_suggestion_id)
+                    .execute()
+                )
+            except Exception:
+                logger.warning(
+                    "Unable to record the accepted AI price",
+                    exc_info=True,
+                )
         return {"result": created_listing}
     except HTTPException:
         raise
@@ -309,7 +343,7 @@ def upsert_tag(
     authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
 ):
     try:
-        tag_data = tag.model_dump() # supabase expects dict representation of database row
+        tag_data = tag.to_dict()
         response = (
             authenticated_supabase.table("ListingTag")
                     .upsert(tag_data)
@@ -331,8 +365,8 @@ def attach_tag_to_listings(
     authenticated_supabase: Client = Depends(get_authenticated_supabase_client),
 ):
     relationships = [
-        ListingTag(listing_id=listing_id, tag_name=request.tag_name)
-        .model_dump(by_alias=True)
+        TaggedRelationship(listing_id=listing_id, tag_name=request.tag_name)
+        .to_dict()
         for listing_id in request.listing_ids
     ]
 
@@ -362,11 +396,11 @@ def add_tag_to_listing(
 ):
     try:
         tag_name = tag.name
-        listing_tag = ListingTag(listing_id = listing_id, tag_name = tag_name)
-        listing_tag_data = listing_tag.model_dump(by_alias = True)
+        relationship = TaggedRelationship(listing_id=listing_id, tag_name=tag_name)
+        relationship_data = relationship.to_dict()
         response = (
             authenticated_supabase.table("Tagged")
-                    .upsert(listing_tag_data)
+                    .upsert(relationship_data)
                     .execute()
         )
         return {
