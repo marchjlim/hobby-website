@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from models.base import SupabaseModel
 
 
-class ListingTag(SupabaseModel):
+class TaggedRelationship(SupabaseModel):
     listing_id: int = Field(alias="ListingId")
     tag_name: str = Field(alias="TagName")
 
