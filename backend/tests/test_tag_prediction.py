@@ -5,7 +5,12 @@ from unittest.mock import patch
 
 import httpx
 
-from services.gemini import parse_gemini_response, request_gemini
+from services.gemini import (
+    EMBEDDING_DIMENSIONS,
+    parse_gemini_response,
+    request_gemini,
+    request_gemini_embedding,
+)
 from services.listing_generation import (
     ListingDetailsSuggestion,
     PricingAnalysis,
@@ -15,6 +20,7 @@ from services.listing_generation import (
     build_prompt,
     build_pricing_prompt,
     calculate_pricing,
+    get_product_metadata,
     get_price_comparables,
     keep_allowed_tag_suggestions,
     rank_price_comparables,
@@ -78,6 +84,76 @@ class ListingSuggestionTest(unittest.TestCase):
         ])
 
         self.assertEqual(match["id"], 2)
+
+    def test_generates_gemini_embedding(self):
+        request = httpx.Request('POST', 'https://example.test')
+        response = httpx.Response(
+            200,
+            request=request,
+            json={'embedding': {'values': [0.1] * EMBEDDING_DIMENSIONS}},
+        )
+
+        with (
+            patch.dict(os.environ, {'GEMINI_API_KEY': 'test'}),
+            patch('services.gemini.httpx.post', return_value=response) as post,
+        ):
+            result = request_gemini_embedding(
+                'task: search result | query: Nu Gundam'
+            )
+
+        self.assertEqual(len(result), EMBEDDING_DIMENSIONS)
+        self.assertEqual(
+            post.call_args.kwargs['json']['output_dimensionality'],
+            EMBEDDING_DIMENSIONS,
+        )
+
+    def test_uses_semantic_product_match_before_lexical_search(self):
+        product = {'id': 2, 'canonical_name': 'RG 1/144 Nu Gundam'}
+
+        class Client:
+            def rpc(self, name, params):
+                self.rpc_name = name
+                self.rpc_params = params
+                return SimpleNamespace(
+                    execute=lambda: SimpleNamespace(data=[product])
+                )
+
+            def table(self, _name):
+                raise AssertionError('Lexical search should not run')
+
+        client = Client()
+        with patch(
+            'services.listing_generation.request_gemini_embedding',
+            return_value=[0.1] * EMBEDDING_DIMENSIONS,
+        ) as embed:
+            match = get_product_metadata(client, 'RG Nu')
+
+        self.assertEqual(match, product)
+        embed.assert_called_once_with('task: search result | query: RG Nu')
+        self.assertEqual(client.rpc_name, 'match_products')
+        self.assertEqual(client.rpc_params['match_count'], 1)
+
+    def test_falls_back_to_lexical_product_match(self):
+        product = {'id': 2, 'canonical_name': 'RG 1/144 Nu Gundam'}
+
+        class Query:
+            def __getattr__(self, _name):
+                return lambda *_args, **_kwargs: self
+
+            def execute(self):
+                return SimpleNamespace(data=[product])
+
+        class Client:
+            def table(self, _name):
+                return Query()
+
+        with patch(
+            'services.listing_generation.request_gemini_embedding',
+            side_effect=RuntimeError('embedding unavailable'),
+        ):
+            match = get_product_metadata(Client(), product['canonical_name'])
+
+        self.assertEqual(match, product)
 
     def test_filters_normalizes_deduplicates_and_sorts_tags(self):
         result = keep_allowed_tag_suggestions(

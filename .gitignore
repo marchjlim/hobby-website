@@ -24,15 +24,19 @@ dist-ssr
 *.sw?
 
 backend/.env
-backend/scripts
+backend/scripts/*
+!backend/scripts/backfill_product_embeddings.py
 AGENTS.md
 docs/
-scripts/
+/scripts/
 .venv
 __pycache__/
 *.py[cod]
 
 /todo/
-/supabase/
+/supabase/*
+!/supabase/migrations/
+/supabase/migrations/*
+!/supabase/migrations/20260821010000_semantic_product_search.sql
 /product_box_art/raw/
 /product_box_art/source_cache.json
