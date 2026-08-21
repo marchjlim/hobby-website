@@ -322,6 +322,7 @@ def get_product_metadata(client: Client, name: str) -> dict | None:
         query_embedding = request_gemini_embedding(
             f'task: search result | query: {name}'
         )
+        # invoke supabase db function
         response = client.rpc(
             'match_products',
             {
