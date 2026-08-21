@@ -24,9 +24,15 @@ dist-ssr
 *.sw?
 
 backend/.env
+backend/scripts
+AGENTS.md
+docs/
+scripts/
 .venv
 __pycache__/
 *.py[cod]
 
 /todo/
 /supabase/
+/product_box_art/raw/
+/product_box_art/source_cache.json

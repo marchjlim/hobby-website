@@ -8,6 +8,7 @@ import sys
 import time
 import unicodedata
 import urllib.request
+import urllib.parse
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -187,6 +188,8 @@ def manual_records():
     records = []
     for (category, _), body in pages.items():
         for item in body.split('<div class="bl_result_item">')[1:]:
+            detail = re.search(r'<a href="([^"]+)"', item)
+            image = re.search(r'<div class="bl_result_img">\s*<img src="([^"]+)"', item)
             jp = re.search(r'<div class="bl_result_name">\s*(.*?)\s*<span', item, re.S)
             en = re.search(r'<span class="bl_result_name_en">(.*?)</span>', item, re.S)
             date = re.search(r"(\d{4})\u5e74(\d+)\u6708", item)
@@ -194,7 +197,9 @@ def manual_records():
             if jp and parsed:
                 canonical, grade, scale = parsed
                 records.append({"canonical": canonical, "grade": grade, "scale": scale, "product": parts(canonical)[2],
-                                "japanese": clean(jp.group(1)), "yearmonth": f"{date.group(1)}-{int(date.group(2)):02d}" if date else ""})
+                                "japanese": clean(jp.group(1)), "yearmonth": f"{date.group(1)}-{int(date.group(2)):02d}" if date else "",
+                                "page_url": urllib.parse.urljoin(MANUAL, detail.group(1)) if detail else "",
+                                "image_url": urllib.parse.urljoin(MANUAL, image.group(1)) if image else ""})
     return records
 
 

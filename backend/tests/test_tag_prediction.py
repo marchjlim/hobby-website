@@ -1,5 +1,6 @@
 import os
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import httpx
@@ -14,6 +15,7 @@ from services.listing_generation import (
     build_prompt,
     build_pricing_prompt,
     calculate_pricing,
+    get_price_comparables,
     keep_allowed_tag_suggestions,
     rank_price_comparables,
 )
@@ -157,6 +159,63 @@ class ListingSuggestionTest(unittest.TestCase):
         self.assertEqual(ranked[0]["match_score"], 6)
         self.assertEqual(ranked[1]["match_score"], 2)
 
+    def test_prioritizes_inactive_same_product_and_enriches_tag_matches(self):
+        class Query:
+            def __init__(self, data):
+                self.data = data
+
+            def __getattr__(self, _name):
+                return lambda *_args, **_kwargs: self
+
+            def execute(self):
+                return SimpleNamespace(data=self.data)
+
+        responses = iter([
+            [{
+                "id": 1,
+                "product_id": 10,
+                "name": "Previous Nu Gundam",
+                "price": 50,
+                "carousell_price": 55,
+                "created_at": "2026-01-01",
+                "is_active": False,
+            }],
+            [{"ListingId": 2, "TagName": "RG"}],
+            [{
+                "id": 2,
+                "product_id": 20,
+                "name": "Comparable RG",
+                "price": 45,
+                "carousell_price": 50,
+                "created_at": "2026-02-01",
+                "is_active": True,
+            }],
+            [{
+                "id": 20,
+                "canonical_name": "RG 1/144 Sazabi",
+                "grade": "RG",
+                "scale": "1/144",
+            }],
+        ])
+
+        class Client:
+            def table(self, _name):
+                return Query(next(responses))
+
+        target = {
+            "id": 10,
+            "canonical_name": "RG 1/144 Nu Gundam",
+            "grade": "RG",
+            "scale": "1/144",
+        }
+        comparables = get_price_comparables(Client(), ["RG"], target)
+
+        self.assertEqual([item["id"] for item in comparables], [1, 2])
+        self.assertEqual(comparables[0]["retrieval_tier"], "same_product")
+        self.assertEqual(
+            comparables[1]["product_metadata"]["canonical_name"],
+            "RG 1/144 Sazabi",
+        )
     def test_calculates_median_prices(self):
         comparables = [
             {
