@@ -28,6 +28,9 @@ PRODUCT_FIELDS = (
 TAGGED_FIELDS = (
     "ListingId,TagName"
 )
+COMPARABLE_LISTING_FIELDS = (
+    "id,product_id,name,price,carousell_price,created_at,is_active"
+)
 
 TAG_WEIGHTS = {
     "hg": 3,
@@ -109,37 +112,50 @@ def tag_weight(tag: str) -> int:
     return TAG_WEIGHTS.get(tag.casefold(), 1)
 
 
-def rank_price_comparables(listings: list[dict], 
-                           relationships: list[dict],
-                           requested_tags: list[str]) -> list[dict]:
+def rank_price_comparables(
+    listings: list[dict],
+    relationships: list[dict],
+    requested_tags: list[str],
+    target_product: dict | None = None,
+) -> list[dict]:
     requested_tag_set = set(requested_tags)
-    matches_by_listing = defaultdict(set) # maps listingId to tags
+    matches_by_listing = defaultdict(set)
     for relationship in relationships:
         tag = relationship["TagName"]
-        id = relationship["ListingId"]
         if tag in requested_tag_set and tag_weight(tag) > 0:
-            matches_by_listing[id].add(tag)
+            matches_by_listing[relationship["ListingId"]].add(tag)
 
     ranked = []
     for listing in listings:
         matched_tags = matches_by_listing.get(listing["id"], set())
         if not matched_tags:
-            # no tags match for this listing
             continue
+        product_metadata = listing.get("product_metadata")
+        product_match_score = sum(
+            product_metadata.get(field) is not None
+            and product_metadata.get(field) == target_product.get(field)
+            for field in ("grade", "scale")
+        ) if product_metadata and target_product else 0
         ranked.append({
             "id": listing["id"],
+            "product_id": listing.get("product_id"),
             "name": listing["name"],
             "price": listing.get("price"),
             "carousell_price": listing.get("carousell_price"),
             "created_at": listing.get("created_at"),
+            "is_active": listing.get("is_active"),
             "matched_tags": sorted(matched_tags),
             "match_score": sum(tag_weight(tag) for tag in matched_tags),
+            "product_match_score": product_match_score,
+            "product_metadata": product_metadata,
+            "retrieval_tier": "tag_match",
         })
 
     return sorted(
         ranked,
         key=lambda listing: (
             listing["match_score"],
+            listing["product_match_score"],
             len(listing["matched_tags"]),
             listing.get("created_at") or "",
         ),
@@ -147,33 +163,95 @@ def rank_price_comparables(listings: list[dict],
     )[:MAX_COMPARABLE_LISTINGS]
 
 
-def get_price_comparables(client: Client, tags: list[str]) -> list[dict]:
-    if not tags:
-        return []
-
+def get_price_comparables(
+    client: Client,
+    tags: list[str],
+    product: dict,
+) -> list[dict]:
     try:
-        relationships = (
-            client.table("Tagged")
-            .select(TAGGED_FIELDS)
-            .in_("TagName", tags)
-            .execute()
-            .data
-        )
-        listing_ids = sorted(set(row["ListingId"] for row in relationships))
-        if not listing_ids:
-            return []
-        listings = (
+        exact_listings = (
             client.table("Listings")
-            .select("id,name,price,carousell_price,created_at")
-            .in_("id", listing_ids)
+            .select(COMPARABLE_LISTING_FIELDS)
+            .eq("product_id", product["id"])
+            .eq("is_active", False)
+            .order("created_at", desc=True)
             .execute()
             .data
         )
-        return rank_price_comparables(listings, relationships, tags)
-    except Exception:
-        logger.exception("Unable to fetch tag-matched comparable listings")
-        return []
 
+        relationships = []
+        tagged_listings = []
+        if tags:
+            relationships = (
+                client.table("Tagged")
+                .select(TAGGED_FIELDS)
+                .in_("TagName", tags)
+                .execute()
+                .data
+            )
+            listing_ids = sorted({row["ListingId"] for row in relationships})
+            if listing_ids:
+                tagged_listings = (
+                    client.table("Listings")
+                    .select(COMPARABLE_LISTING_FIELDS)
+                    .in_("id", listing_ids)
+                    .execute()
+                    .data
+                )
+
+        product_by_id = {product["id"]: product}
+        other_product_ids = sorted({
+            listing["product_id"]
+            for listing in tagged_listings
+            if listing.get("product_id") is not None
+            and listing["product_id"] != product["id"]
+        })
+        if other_product_ids:
+            products = (
+                client.table("products")
+                .select(PRODUCT_FIELDS)
+                .in_("id", other_product_ids)
+                .execute()
+                .data
+            )
+            product_by_id.update({item["id"]: item for item in products})
+
+        enriched_tagged_listings = [
+            {
+                **listing,
+                "product_metadata": product_by_id.get(listing.get("product_id")),
+            }
+            for listing in tagged_listings
+        ]
+        ranked_tag_matches = rank_price_comparables(
+            enriched_tagged_listings,
+            relationships,
+            tags,
+            product,
+        )
+        ranked_by_id = {item["id"]: item for item in ranked_tag_matches}
+        exact_comparables = []
+        for listing in exact_listings:
+            comparable = ranked_by_id.get(listing["id"], {
+                **listing,
+                "matched_tags": [],
+                "match_score": 0,
+                "product_match_score": 2,
+                "product_metadata": product,
+            })
+            exact_comparables.append({
+                **comparable,
+                "retrieval_tier": "same_product",
+            })
+
+        exact_ids = {item["id"] for item in exact_comparables}
+        return (
+            exact_comparables
+            + [item for item in ranked_tag_matches if item["id"] not in exact_ids]
+        )[:MAX_COMPARABLE_LISTINGS]
+    except Exception:
+        logger.exception("Unable to fetch comparable listings")
+        return []
 
 def normalize_product_name(name: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", name.casefold()))
@@ -275,7 +353,8 @@ def calculate_pricing(comparables: list[dict],
     if website_count >= MIN_COMPARABLE_PRICES or carousell_count >= MIN_COMPARABLE_PRICES:
         rationale = (
             f"Median of {website_count} website and {carousell_count} Carousell "
-            f"prices, ranked by shared tags: {', '.join(matched_tags)}."
+            "prices. Exact-product listings are prioritised, followed by shared tags "
+            f"and product metadata. Matched tags: {', '.join(matched_tags)}."
         )
     elif msrp_used:
         rationale = "Not enough comparables; the website price falls back to SGD MSRP."
@@ -383,7 +462,7 @@ def generate_pricing(client: Client, product: dict,
                      listing_name: str, tags: list[str]) -> dict:
     # do not use product metadata if msrp is not available in the db
     product_metadata = product if product.get("msrp") is not None else None
-    pricing = calculate_pricing(get_price_comparables(client, tags), product_metadata)
+    pricing = calculate_pricing(get_price_comparables(client, tags, product), product_metadata)
     if pricing["pricing_comparables"]:
         try:
             analysis = request_gemini(
