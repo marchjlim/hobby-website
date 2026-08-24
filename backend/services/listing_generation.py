@@ -2,6 +2,7 @@ from collections import defaultdict
 from difflib import SequenceMatcher
 import json
 import logging
+import os
 import re
 from statistics import median
 
@@ -334,7 +335,11 @@ def get_product_metadata(client: Client, name: str) -> dict | None:
         if response.data:
             return response.data[0]
     except Exception:
-        logger.info('Semantic product search failed; using lexical fallback', exc_info=True)
+        logger.info('Semantic product search failed', exc_info=True)
+
+    if os.getenv('DISABLE_LEXICAL_PRODUCT_FALLBACK') == '1':
+        logger.info('Lexical product fallback is disabled')
+        return None
 
     return _get_lexical_product_match(client, name)
 

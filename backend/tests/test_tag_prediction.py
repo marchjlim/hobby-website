@@ -155,6 +155,22 @@ class ListingSuggestionTest(unittest.TestCase):
 
         self.assertEqual(match, product)
 
+    def test_can_disable_lexical_product_match(self):
+        class Client:
+            def table(self, _name):
+                raise AssertionError('Lexical search should not run')
+
+        with (
+            patch.dict(os.environ, {'DISABLE_LEXICAL_PRODUCT_FALLBACK': '1'}),
+            patch(
+                'services.listing_generation.request_gemini_embedding',
+                side_effect=RuntimeError('embedding unavailable'),
+            ),
+        ):
+            match = get_product_metadata(Client(), 'RG Nu')
+
+        self.assertIsNone(match)
+
     def test_filters_normalizes_deduplicates_and_sorts_tags(self):
         result = keep_allowed_tag_suggestions(
             [

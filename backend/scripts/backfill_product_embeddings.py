@@ -96,7 +96,7 @@ def embed_products(
             if attempt == MAX_ATTEMPTS - 1:
                 response.raise_for_status()
 
-        delay = 4 ** attempt
+        delay = 8 ** attempt
         print(
             f"Gemini temporarily unavailable; retrying in {delay}s "
             f"({attempt + 2}/{MAX_ATTEMPTS})",
