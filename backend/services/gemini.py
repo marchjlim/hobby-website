@@ -9,6 +9,36 @@ from pydantic import BaseModel
 
 
 logger = logging.getLogger(__name__)
+EMBEDDING_DIMENSIONS = 768
+
+
+def request_gemini_embedding(text: str) -> list[float]:
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key:
+        raise RuntimeError('Gemini embeddings are not configured')
+
+    model = os.getenv('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-2')
+    try:
+        response = httpx.post(
+            (
+                'https://generativelanguage.googleapis.com/v1beta/models/'
+                f'{model}:embedContent'
+            ),
+            headers={'x-goog-api-key': api_key},
+            json={
+                'model': f'models/{model}',
+                'content': {'parts': [{'text': text}]},
+                'output_dimensionality': EMBEDDING_DIMENSIONS,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        values = response.json()['embedding']['values']
+        if len(values) != EMBEDDING_DIMENSIONS:
+            raise ValueError('Unexpected embedding dimensions')
+        return [float(value) for value in values]
+    except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError('Unable to generate Gemini embedding') from exc
 
 
 def parse_gemini_response(response_data: dict, schema: type[BaseModel]) -> BaseModel:

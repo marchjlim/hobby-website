@@ -2,6 +2,7 @@ from collections import defaultdict
 from difflib import SequenceMatcher
 import json
 import logging
+import os
 import re
 from statistics import median
 
@@ -10,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from supabase import Client
 
 from database import supabase
-from services.gemini import request_gemini
+from services.gemini import request_gemini, request_gemini_embedding
 
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ ALLOWED_PREDICTION_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "imag
 MAX_TAG_SUGGESTIONS = 7
 MAX_COMPARABLE_LISTINGS = 15
 MIN_COMPARABLE_PRICES = 2
+PRODUCT_MATCH_THRESHOLD = 0.65
 
 # DB fields
 PRODUCT_FIELDS = (
@@ -268,7 +270,7 @@ def best_product_match(name: str, candidates: list[dict]) -> dict | None:
     )
 
 
-def get_product_metadata(client: Client, name: str) -> dict | None:
+def _get_lexical_product_match(client: Client, name: str) -> dict | None:
 
     try:
         exact = (
@@ -314,6 +316,33 @@ def get_product_metadata(client: Client, name: str) -> dict | None:
     except Exception:
         logger.info("Product catalogue is unavailable or has no migration", exc_info=True)
         return None
+
+
+def get_product_metadata(client: Client, name: str) -> dict | None:
+    try:
+        query_embedding = request_gemini_embedding(
+            f'task: search result | query: {name}'
+        )
+        # invoke supabase db function
+        response = client.rpc(
+            'match_products',
+            {
+                'query_embedding': query_embedding,
+                'match_threshold': PRODUCT_MATCH_THRESHOLD,
+                'match_count': 1,
+            },
+        ).execute()
+        if response.data:
+            return response.data[0]
+    except Exception:
+        logger.info('Semantic product search failed', exc_info=True)
+
+    if os.getenv('DISABLE_LEXICAL_PRODUCT_FALLBACK') == '1':
+        logger.info('Lexical product fallback is disabled')
+        return None
+
+    return _get_lexical_product_match(client, name)
+
 
 def median_price(comparables: list[dict], field: str) -> float | None:
     prices = [
